@@ -1,0 +1,88 @@
+# Flutter & iOS Git Ignore Template
+
+# Miscellaneous
+*.class
+*.log
+*.pyc
+*.swp
+.DS_Store
+.atom/
+.build/
+.buildlog/
+.history
+.svn/
+.swiftpm/
+migrate_working_dir/
+
+# .gitignore
+.env
+.env.*
+assets/env.*
+ios/.env
+
+# IntelliJ related
+*.iml
+*.ipr
+*.iws
+.idea/
+
+# The .vscode folder contains launch configuration and tasks you configure in
+# VS Code which you may wish to be included in version control, so this line
+# is commented out by default.
+#.vscode/
+
+# Flutter/Dart/Pub related
+**/doc/api/
+**/ios/Flutter/.last_build_id
+.dart_tool/
+.flutter-plugins
+.packages
+.pub/
+build/
+flutter_*.png
+
+# iOS related
+ios/Flutter/Generated.xcconfig
+ios/Flutter/flutter_export_environment.sh
+ios/Pods/
+ios/Podfile.lock
+ios/.symlinks/
+ios/Runner.xcworkspace/
+ios/.generated/
+ios/.idea/
+ios/.DS_Store
+
+# Xcode & macOS
+*.xcuserstate
+*.xcscmblueprint
+*.xccheckout
+*.xcworkspace/xcshareddata/WorkspaceSettings.xcsettings
+DerivedData/
+*.xcconfig.backup
+*.pbxuser
+*.mode1v3
+*.mode2v3
+*.perspectivev3
+*.xcodeproj/project.xcworkspace/
+*.xcodeproj/xcuserdata/
+
+# Archives
+*.xcarchive
+
+# Local backup or snapshots
+*.zip
+*.bak
+*.orig
+*.swp
+
+# IDEs
+.idea/
+.vscode/
+
+# System
+.DS_Store
+Thumbs.db
+
+# Manual build snapshots
+mybuildsettings_snapshot.txt
+tbp_files.zip
