@@ -54,24 +54,18 @@ class _NewRegistrationScreenState extends State<NewRegistrationScreen> {
   Future<void> _register() async {
     if (_formKey.currentState!.validate()) {
       try {
-        final result = await widget.authService.createUserWithEmail(
-          _emailController.text.trim(),
-          _passwordController.text.trim(),
-          _fullNameController.text.trim(),
-          widget.referredBy.isNotEmpty ? widget.referredBy : null,
-        );
+    final result = await widget.authService.createUserWithEmail(
+      email: _emailController.text.trim(),
+      password: _passwordController.text.trim(),
+      fullName: _fullNameController.text.trim(),
+      country: _selectedCountry ?? '',
+      state: _selectedState ?? '',
+      city: _cityController.text.trim(),
+      referredBy: widget.referredBy.isNotEmpty ? widget.referredBy : null,
+);
 
-        if (result['uid'] != null && mounted) {
-          await widget.firestoreService.createUserProfile(
-            uid: result['uid']!,
-            email: _emailController.text.trim(),
-            fullName: _fullNameController.text.trim(),
-            country: _selectedCountry ?? '',
-            state: _selectedState ?? '',
-            city: _cityController.text.trim(),
-            referredBy: widget.referredBy.isNotEmpty ? widget.referredBy : null,
-          );
 
+        if (result && mounted) {
           Navigator.of(context).pop();
         }
       } catch (e) {
@@ -160,7 +154,7 @@ class _NewRegistrationScreenState extends State<NewRegistrationScreen> {
               const SizedBox(height: 16.0),
               ElevatedButton(
                 onPressed: _register,
-                child: const Text('Register'),
+                child: const Text('Create Account'),
               ),
             ],
           ),
