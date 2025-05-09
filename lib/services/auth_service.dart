@@ -130,4 +130,5 @@ class AuthService {
     final hash = email.hashCode.toRadixString(36).toUpperCase();
     return hash.substring(0, hash.length > 6 ? 6 : hash.length);
   }
+
 }
