@@ -65,8 +65,29 @@ class _ProfileScreenState extends State<ProfileScreen> {
       body: Padding(
         padding: const EdgeInsets.all(20.0),
         child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
           children: [
+            // PATCH START: Add profile picture at top of profile screen
+            Center(
+              child: Stack(
+                alignment: Alignment.bottomRight,
+                children: [
+                  CircleAvatar(
+                    radius: 50,
+                    backgroundColor: Colors.grey.shade300,
+                    backgroundImage: NetworkImage(
+                      user.photoUrl ?? 'https://www.gravatar.com/avatar/placeholder?s=200&d=mp'
+                    ),
+                  ),
+                  CircleAvatar(
+                    radius: 16,
+                    backgroundColor: Colors.white,
+                    child: Icon(Icons.camera_alt, size: 18, color: Colors.grey.shade700),
+                  )
+                ],
+              ),
+            ),
+            const SizedBox(height: 24),
+            // PATCH END
             _infoRow('Name', user.fullName ?? ''),
             _infoRow('Email', user.email ?? ''),
             _infoRow('Password', 'Change password', isLink: true, onTap: () => _openChangePasswordModal()),
