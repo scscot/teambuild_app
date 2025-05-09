@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:tbp/models/user_model.dart';
 import 'package:tbp/services/session_manager.dart';
+import 'package:tbp/services/firestore_service.dart';
 import 'package:tbp/screens/edit_profile_screen.dart';
 import 'package:tbp/screens/change_password_screen.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
@@ -21,21 +22,23 @@ class _ProfileScreenState extends State<ProfileScreen> {
     _loadSponsorName();
   }
 
+  // PATCH START: use referralCode-based lookup instead of UID
   Future<void> _loadSponsorName() async {
     final referredBy = SessionManager.instance.currentUser?.referredBy;
     if (referredBy != null && referredBy.isNotEmpty) {
       try {
-        final doc = await FirebaseFirestore.instance.collection('users').doc(referredBy).get();
-        if (doc.exists && mounted) {
+        final sponsorData = await FirestoreService().getUserProfileByReferralCode(referredBy);
+        if (sponsorData != null && mounted) {
           setState(() {
-            sponsorName = doc.data()?['fullName'] ?? "";
+            sponsorName = sponsorData['fullName'] ?? '';
           });
         }
       } catch (e) {
-        debugPrint('Error fetching sponsor name: $e');
+        debugPrint('Error fetching sponsor name: \$e');
       }
     }
   }
+  // PATCH END
 
   @override
   Widget build(BuildContext context) {
@@ -59,15 +62,6 @@ class _ProfileScreenState extends State<ProfileScreen> {
           ),
         ],
       ),
-      floatingActionButton: FloatingActionButton(
-        backgroundColor: Colors.deepPurple.shade100,
-        child: const Icon(Icons.edit, color: Colors.deepPurple),
-        onPressed: () {
-          Navigator.of(context).push(MaterialPageRoute(
-            builder: (_) => const EditProfileScreen(),
-          ));
-        },
-      ),
       body: Padding(
         padding: const EdgeInsets.all(20.0),
         child: Column(
@@ -82,6 +76,27 @@ class _ProfileScreenState extends State<ProfileScreen> {
             _infoRow('Joined Date', _formatDate(user.createdAt)),
             if (sponsorName != null && sponsorName!.isNotEmpty)
               _infoRow('Your Sponsor', sponsorName!),
+            const SizedBox(height: 24),
+            // PATCH START: Add centered Edit Profile button
+            Center(
+              child: ElevatedButton(
+                onPressed: () {
+                  Navigator.of(context).push(
+                    MaterialPageRoute(builder: (_) => const EditProfileScreen()),
+                  );
+                },
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: Colors.deepPurple.shade50,
+                  foregroundColor: Colors.deepPurple,
+                  padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(20),
+                  ),
+                ),
+                child: const Text('Edit Profile'),
+              ),
+            ),
+            // PATCH END
           ],
         ),
       ),
@@ -125,8 +140,15 @@ class _ProfileScreenState extends State<ProfileScreen> {
     );
   }
 
+  // PATCH START: Format joined date as 'Month Day, Year'
   String _formatDate(DateTime? date) {
     if (date == null) return 'Unknown';
-    return '${date.month}/${date.day}/${date.year}';
+    final months = [
+      'January', 'February', 'March', 'April', 'May', 'June',
+      'July', 'August', 'September', 'October', 'November', 'December'
+    ];
+    final monthName = months[date.month - 1];
+    return '$monthName ${date.day}, ${date.year}';
   }
+  // PATCH END
 }

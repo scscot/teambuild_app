@@ -1,7 +1,10 @@
-// FINAL PATCHED: firestore_service.dart — Now includes getUserProfileByReferralCode()
+// FINAL PATCHED: firestore_service.dart — Fully preserved + getUserProfileById()
 
 import 'dart:convert';
 import 'package:http/http.dart' as http;
+import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:flutter/foundation.dart';
+import 'package:tbp/models/user_model.dart';
 
 class FirestoreService {
   final String projectId = 'teambuilder-plus-fe74d';
@@ -111,5 +114,17 @@ class FirestoreService {
       headers: {'Content-Type': 'application/json'},
       body: body,
     );
+  }
+
+  Future<UserModel?> getUserProfileById(String uid) async {
+    try {
+      final doc = await FirebaseFirestore.instance.collection('users').doc(uid).get();
+      if (doc.exists) {
+        return UserModel.fromJson(doc.data()!);
+      }
+    } catch (e) {
+      debugPrint('Error in getUserProfileById: \$e');
+    }
+    return null;
   }
 }
