@@ -1,5 +1,8 @@
 // FINAL PATCHED: user_model.dart — Uses DateTime for createdAt
 
+import 'package:cloud_firestore/cloud_firestore.dart';
+
+
 class UserModel {
   final String uid;
   final String email;
@@ -32,7 +35,10 @@ class UserModel {
       uid: json['uid'] ?? '',
       email: json['email'] ?? '',
       fullName: json['fullName'] ?? '',
-      createdAt: DateTime.tryParse(json['createdAt'] ?? '') ?? DateTime.now(),
+      // createdAt: DateTime.tryParse(json['createdAt'] ?? '') ?? DateTime.now(),
+      createdAt: json['createdAt'] is Timestamp
+    ? (json['createdAt'] as Timestamp).toDate()
+    : DateTime.tryParse(json['createdAt'] ?? '') ?? DateTime.now(),
       photoUrl: json['photoUrl'],
       referredBy: json['referredBy'],
       referredByName: json['referredByName'],

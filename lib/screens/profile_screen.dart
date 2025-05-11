@@ -5,6 +5,13 @@ import 'package:tbp/services/firestore_service.dart';
 import 'package:tbp/screens/edit_profile_screen.dart';
 import 'package:tbp/screens/change_password_screen.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:intl/intl.dart';
+
+String formatDate(DateTime? date) {
+  if (date == null) return 'Unknown';
+  return DateFormat.yMMMMd().format(date);
+}
+
 
 class ProfileScreen extends StatefulWidget {
   const ProfileScreen({Key? key}) : super(key: key);
@@ -94,21 +101,34 @@ class _ProfileScreenState extends State<ProfileScreen> {
             if ((user.city ?? '').isNotEmpty) _infoRow('City', user.city!),
             if ((user.state ?? '').isNotEmpty) _infoRow('State/Province', user.state!),
             if ((user.country ?? '').isNotEmpty) _infoRow('Country', user.country!),
-            _infoRow('Joined Date', _formatDate(user.createdAt)),
+            _infoRow('Joined Date', formatDate(user.createdAt)),
             if (sponsorName != null && sponsorName!.isNotEmpty)
               _infoRow('Your Sponsor', sponsorName!),
             const SizedBox(height: 24),
             // PATCH START: Add centered Edit Profile button
             Center(
               child: ElevatedButton(
-                onPressed: () {
-                  Navigator.push(
-                    context,
-                    MaterialPageRoute(
-                      builder: (context) => const EditProfileScreen(),
-                    ),
-                  );
-                },
+                
+                
+            onPressed: () async {
+              await Navigator.push(
+                context,
+                MaterialPageRoute(
+                  builder: (context) => const EditProfileScreen(),
+                ),
+              );
+
+              final uid = SessionManager.instance.currentUser?.uid;
+              if (uid != null && uid.isNotEmpty) {
+                final updatedUser = await FirestoreService().getUserProfileById(uid);
+                if (updatedUser != null && mounted) {
+                  SessionManager.instance.currentUser = updatedUser;
+                  setState(() {});
+                  _loadSponsorName();
+                }
+              }
+            },
+
                 style: ElevatedButton.styleFrom(
                   backgroundColor: Colors.deepPurple.shade50,
                   foregroundColor: Colors.deepPurple,

@@ -52,8 +52,10 @@ class AuthService {
     } catch (e) {
       debugPrint('AuthService error: $e');
     }
-
+    
+    debugPrint('❌ Login failed: user profile not found or session not saved.');
     return false;
+
   }
 
   Future<String> _exchangeRefreshToken(String refreshToken) async {

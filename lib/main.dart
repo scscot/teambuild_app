@@ -10,6 +10,8 @@ Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
   await dotenv.load(fileName: 'assets/env.prod');
   await Firebase.initializeApp(); // ✅ Firebase now initialized globally
+  await SessionManager.instance.loadFromStorage(); // ✅ Load user session from storage
+  await SessionManager.instance.clear(); // TEMP: Force fresh login
   debugPrint("✅ .env loaded with GOOGLE_API_KEY: ${dotenv.env['GOOGLE_API_KEY']}");
   runApp(const MyApp());
 }
@@ -34,13 +36,13 @@ class EntryPoint extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final user = SessionManager.instance.currentUser;
-    if (user == null) {
+    if (user == null || user.email.isEmpty || user.uid.isEmpty) {
       return const LoginScreen();
-    } else if ((user.fullName ?? '').isEmpty) {
-      // Placeholder for profile completion screen if needed
-      return ProfileScreen();
+    } else if ((user.country ?? '').isEmpty || (user.state ?? '').isEmpty) {
+      return ProfileScreen(); // Country/state missing, prompt user to update
     } else {
       return const DashboardScreen();
     }
   }
 }
+

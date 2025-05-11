@@ -29,12 +29,12 @@ class _LoginScreenState extends State<LoginScreen> {
     });
 
     try {
-      final user = await authService.signInWithEmailAndPassword(
+      final success = await authService.signInWithEmailAndPassword(
         emailController.text.trim(),
         passwordController.text.trim(),
       );
 
-      if (user != null) {
+      if (success) {
         Navigator.pushReplacement(
           context,
           MaterialPageRoute(builder: (_) => DashboardScreen()),
@@ -44,6 +44,7 @@ class _LoginScreenState extends State<LoginScreen> {
           errorMessage = 'Login failed. Please check your credentials.';
         });
       }
+
     } catch (e) {
       setState(() {
         errorMessage = 'Login failed: $e';

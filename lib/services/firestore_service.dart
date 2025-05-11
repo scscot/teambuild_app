@@ -120,10 +120,11 @@ class FirestoreService {
     try {
       final doc = await FirebaseFirestore.instance.collection('users').doc(uid).get();
       if (doc.exists) {
+        debugPrint('📥 Fetched Firestore doc for UID: $uid => ${doc.data()}');
         return UserModel.fromJson(doc.data()!);
       }
     } catch (e) {
-      debugPrint('Error in getUserProfileById: \$e');
+      debugPrint('❌ Error in getUserProfileById: $e');
     }
     return null;
   }
