@@ -11,10 +11,14 @@ zip -r tbp_files.zip \
 lib/ \
 assets/ \
 scripts/ \
+TeamBuild_Plus_Project_Updated.docx \
+xcode_build_settings.txt \
+xcode_build_core_settings.txt \
 pubspec.yaml \
 pubspec.lock \
 ios/Podfile \
 ios/Podfile.lock \
+ios/Runner/GoogleService-Info.plist \
 ios/Runner.xcworkspace/contents.xcworkspacedata \
 ios/Runner.xcodeproj/project.pbxproj \
 ios/Flutter/Generated.xcconfig \

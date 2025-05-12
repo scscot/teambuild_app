@@ -3,15 +3,14 @@ import 'package:tbp/models/user_model.dart';
 import 'package:tbp/services/session_manager.dart';
 import 'package:tbp/services/firestore_service.dart';
 import 'package:tbp/screens/edit_profile_screen.dart';
-import 'package:tbp/screens/change_password_screen.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:intl/intl.dart';
+import 'package:tbp/screens/login_screen.dart';
 
 String formatDate(DateTime? date) {
   if (date == null) return 'Unknown';
   return DateFormat.yMMMMd().format(date);
 }
-
 
 class ProfileScreen extends StatefulWidget {
   const ProfileScreen({Key? key}) : super(key: key);
@@ -29,7 +28,6 @@ class _ProfileScreenState extends State<ProfileScreen> {
     _loadSponsorName();
   }
 
-  // PATCH START: use referralCode-based lookup instead of UID
   Future<void> _loadSponsorName() async {
     final referredBy = SessionManager.instance.currentUser?.referredBy;
     if (referredBy != null && referredBy.isNotEmpty) {
@@ -45,7 +43,6 @@ class _ProfileScreenState extends State<ProfileScreen> {
       }
     }
   }
-  // PATCH END
 
   @override
   Widget build(BuildContext context) {
@@ -62,8 +59,12 @@ class _ProfileScreenState extends State<ProfileScreen> {
             icon: const Icon(Icons.logout),
             onPressed: () async {
               await SessionManager.instance.signOut();
+              final navigator = Navigator.of(context);
               if (mounted) {
-                Navigator.pushReplacementNamed(context, '/login');
+                navigator.pushAndRemoveUntil(
+                  MaterialPageRoute(builder: (_) => const LoginScreen()),
+                  (route) => false,
+                );
               }
             },
           ),
@@ -73,7 +74,6 @@ class _ProfileScreenState extends State<ProfileScreen> {
         padding: const EdgeInsets.all(20.0),
         child: Column(
           children: [
-            // PATCH START: Add profile picture at top of profile screen
             Center(
               child: Stack(
                 alignment: Alignment.bottomRight,
@@ -82,7 +82,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
                     radius: 50,
                     backgroundColor: Colors.grey.shade300,
                     backgroundImage: NetworkImage(
-                      user.photoUrl ?? 'https://www.gravatar.com/avatar/placeholder?s=200&d=mp'
+                      user.photoUrl ?? 'https://www.gravatar.com/avatar/placeholder?s=200&d=mp',
                     ),
                   ),
                   CircleAvatar(
@@ -94,10 +94,8 @@ class _ProfileScreenState extends State<ProfileScreen> {
               ),
             ),
             const SizedBox(height: 24),
-            // PATCH END
             _infoRow('Name', user.fullName ?? ''),
             _infoRow('Email', user.email ?? ''),
-            _infoRow('Password', 'Change password', isLink: true, onTap: () => _openChangePasswordModal()),
             if ((user.city ?? '').isNotEmpty) _infoRow('City', user.city!),
             if ((user.state ?? '').isNotEmpty) _infoRow('State/Province', user.state!),
             if ((user.country ?? '').isNotEmpty) _infoRow('Country', user.country!),
@@ -105,30 +103,26 @@ class _ProfileScreenState extends State<ProfileScreen> {
             if (sponsorName != null && sponsorName!.isNotEmpty)
               _infoRow('Your Sponsor', sponsorName!),
             const SizedBox(height: 24),
-            // PATCH START: Add centered Edit Profile button
             Center(
               child: ElevatedButton(
-                
-                
-            onPressed: () async {
-              await Navigator.push(
-                context,
-                MaterialPageRoute(
-                  builder: (context) => const EditProfileScreen(),
-                ),
-              );
+                onPressed: () async {
+                  await Navigator.push(
+                    context,
+                    MaterialPageRoute(
+                      builder: (context) => const EditProfileScreen(),
+                    ),
+                  );
 
-              final uid = SessionManager.instance.currentUser?.uid;
-              if (uid != null && uid.isNotEmpty) {
-                final updatedUser = await FirestoreService().getUserProfileById(uid);
-                if (updatedUser != null && mounted) {
-                  SessionManager.instance.currentUser = updatedUser;
-                  setState(() {});
-                  _loadSponsorName();
-                }
-              }
-            },
-
+                  final uid = SessionManager.instance.currentUser?.uid;
+                  if (uid != null && uid.isNotEmpty) {
+                    final updatedUser = await FirestoreService().getUserProfileById(uid);
+                    if (updatedUser != null && mounted) {
+                      SessionManager.instance.currentUser = updatedUser;
+                      setState(() {});
+                      _loadSponsorName();
+                    }
+                  }
+                },
                 style: ElevatedButton.styleFrom(
                   backgroundColor: Colors.deepPurple.shade50,
                   foregroundColor: Colors.deepPurple,
@@ -140,7 +134,6 @@ class _ProfileScreenState extends State<ProfileScreen> {
                 child: const Text('Edit Profile'),
               ),
             ),
-            // PATCH END
           ],
         ),
       ),
@@ -173,18 +166,6 @@ class _ProfileScreenState extends State<ProfileScreen> {
     );
   }
 
-  void _openChangePasswordModal() {
-    showModalBottomSheet(
-      context: context,
-      isScrollControlled: true,
-      shape: const RoundedRectangleBorder(
-        borderRadius: BorderRadius.vertical(top: Radius.circular(25.0)),
-      ),
-      builder: (_) => const ChangePasswordScreen(),
-    );
-  }
-
-  // PATCH START: Format joined date as 'Month Day, Year'
   String _formatDate(DateTime? date) {
     if (date == null) return 'Unknown';
     final months = [
@@ -194,5 +175,4 @@ class _ProfileScreenState extends State<ProfileScreen> {
     final monthName = months[date.month - 1];
     return '$monthName ${date.day}, ${date.year}';
   }
-  // PATCH END
 }

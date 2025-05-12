@@ -26,19 +26,17 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
   @override
   void initState() {
     super.initState();
-      final initialUser = SessionManager.instance.currentUser;
-      _nameController = TextEditingController(text: initialUser?.fullName ?? '');
-      _emailController = TextEditingController(text: initialUser?.email ?? '');
-      _cityController = TextEditingController(text: initialUser?.city ?? '');
-      _selectedCountry = initialUser?.country;
+    final initialUser = SessionManager.instance.currentUser;
+    _nameController = TextEditingController(text: initialUser?.fullName ?? '');
+    _emailController = TextEditingController(text: initialUser?.email ?? '');
+    _cityController = TextEditingController(text: initialUser?.city ?? '');
+    _selectedCountry = initialUser?.country;
+    _selectedState = initialUser?.state;
 
-      if (_selectedCountry != null && statesByCountry.containsKey(_selectedCountry)) {
-        final rawList = statesByCountry[_selectedCountry!]!;
-        _statesForCountry = rawList.map((s) => s.trim()).toSet().toList();
-        if (_statesForCountry.contains(initialUser?.state)) {
-          _selectedState = initialUser?.state;
-        }
-      }
+    if (_selectedCountry != null && statesByCountry.containsKey(_selectedCountry)) {
+      final rawList = statesByCountry[_selectedCountry!]!;
+      _statesForCountry = rawList.map((s) => s.trim()).toSet().toList();
+    }
   }
 
   @override
@@ -101,9 +99,11 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
                 padding: const EdgeInsets.only(bottom: 12),
                 child: Text(_errorMessage!, style: const TextStyle(color: Colors.red)),
               ),
-            ElevatedButton(
-              onPressed: _isSaving ? null : _saveChanges,
-              child: _isSaving ? const CircularProgressIndicator() : const Text('Save Changes'),
+            Center(
+              child: ElevatedButton(
+                onPressed: _isSaving ? null : _saveChanges,
+                child: _isSaving ? const CircularProgressIndicator() : const Text('Save Changes'),
+              ),
             ),
           ],
         ),
@@ -111,67 +111,64 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
     );
   }
 
-    Future<void> _saveChanges() async {
+  Future<void> _saveChanges() async {
+    setState(() {
+      _isSaving = true;
+      _errorMessage = null;
+    });
+
+    await SessionManager.instance.loadFromStorage();
+    var user = SessionManager.instance.currentUser;
+
+    if (user == null || user.uid.isEmpty) {
       setState(() {
-        _isSaving = true;
-        _errorMessage = null;
+        _isSaving = false;
+        _errorMessage = 'User session not available. Please log out and log back in.';
       });
-
-      // 🔄 Force reload from storage every time to ensure UID is fresh
-      await SessionManager.instance.loadFromStorage();
-      var user = SessionManager.instance.currentUser;
-
-      if (user == null || user.uid.isEmpty) {
-        setState(() {
-          _isSaving = false;
-          _errorMessage = 'User session not available. Please log out and log back in.';
-        });
-        debugPrint('❌ Blocked update: UID was null or empty.');
-        return;
-      }
-
-      // 🛰️ Runtime debug info
-      debugPrint('🛰️ Attempting Firestore update with:');
-      debugPrint(' - fullName: ${_nameController.text.trim()}');
-      debugPrint(' - city: ${_cityController.text.trim()}');
-      debugPrint(' - state: $_selectedState');
-      debugPrint(' - country: $_selectedCountry');
-
-      try {
-        await FirebaseFirestore.instance.collection('users').doc(user.uid).update({
-          'fullName': _nameController.text.trim(),
-          'city': _cityController.text.trim(),
-          'state': _selectedState ?? '',
-          'country': _selectedCountry ?? '',
-        });
-
-        final refreshedDoc = await FirebaseFirestore.instance.collection('users').doc(user.uid).get();
-        final refreshedData = refreshedDoc.data();
-
-        if (refreshedData != null && refreshedData['email'] != null && refreshedData['fullName'] != null) {
-          final updatedUser = UserModel.fromJson({
-            ...refreshedData,
-            'uid': refreshedDoc.id,
-          });
-
-          SessionManager.instance.saveSession(
-            user: updatedUser,
-            idToken: SessionManager.instance.idToken ?? '',
-            accessToken: SessionManager.instance.accessToken ?? '',
-          );
-          SessionManager.instance.saveToStorage();
-          debugPrint('✅ User model refreshed successfully.');
-        } else {
-          debugPrint('❌ Refreshed Firestore data is missing required fields.');
-        }
-
-        if (mounted) Navigator.of(context).pop();
-      } catch (e) {
-        setState(() => _errorMessage = 'Failed to save changes. Please try again');
-        debugPrint('❌ Firestore update failed with: $e');
-      } finally {
-        if (mounted) setState(() => _isSaving = false);
-      }
+      debugPrint('❌ Blocked update: UID was null or empty.');
+      return;
     }
 
+    debugPrint('🛰️ Attempting Firestore update with:');
+    debugPrint(' - fullName: ${_nameController.text.trim()}');
+    debugPrint(' - city: ${_cityController.text.trim()}');
+    debugPrint(' - state: $_selectedState');
+    debugPrint(' - country: $_selectedCountry');
+
+    try {
+      await FirebaseFirestore.instance.collection('users').doc(user.uid).update({
+        'fullName': _nameController.text.trim(),
+        'city': _cityController.text.trim(),
+        'state': _selectedState ?? '',
+        'country': _selectedCountry ?? '',
+      });
+
+      final refreshedDoc = await FirebaseFirestore.instance.collection('users').doc(user.uid).get();
+      final refreshedData = refreshedDoc.data();
+
+      if (refreshedData != null && refreshedData['email'] != null && refreshedData['fullName'] != null) {
+        final updatedUser = UserModel.fromJson({
+          ...refreshedData,
+          'uid': refreshedDoc.id,
+        });
+
+        SessionManager.instance.saveSession(
+          user: updatedUser,
+          idToken: SessionManager.instance.idToken ?? '',
+          accessToken: SessionManager.instance.accessToken ?? '',
+        );
+        SessionManager.instance.saveToStorage();
+        debugPrint('✅ User model refreshed successfully.');
+      } else {
+        debugPrint('❌ Refreshed Firestore data is missing required fields.');
+      }
+
+      if (mounted) Navigator.of(context).pop();
+    } catch (e) {
+      setState(() => _errorMessage = 'Failed to save changes. Please try again');
+      debugPrint('❌ Firestore update failed with: $e');
+    } finally {
+      if (mounted) setState(() => _isSaving = false);
+    }
+  }
 }

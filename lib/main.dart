@@ -11,7 +11,7 @@ Future<void> main() async {
   await dotenv.load(fileName: 'assets/env.prod');
   await Firebase.initializeApp(); // ✅ Firebase now initialized globally
   await SessionManager.instance.loadFromStorage(); // ✅ Load user session from storage
-  await SessionManager.instance.clear(); // TEMP: Force fresh login
+  await SessionManager.instance.clear(); // TEMP DISABLED for login/session testing
   debugPrint("✅ .env loaded with GOOGLE_API_KEY: ${dotenv.env['GOOGLE_API_KEY']}");
   runApp(const MyApp());
 }

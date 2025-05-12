@@ -1,6 +1,10 @@
 // FINAL REFINED: login_screen.dart — Restores locked-in visual layout
 
 import 'package:flutter/material.dart';
+import 'dart:convert';
+import 'package:http/http.dart' as http;
+import 'package:flutter_dotenv/flutter_dotenv.dart';
+import 'package:google_sign_in/google_sign_in.dart';
 import 'new_registration_screen.dart';
 import '../services/auth_service.dart';
 import '../services/firestore_service.dart';
@@ -44,13 +48,70 @@ class _LoginScreenState extends State<LoginScreen> {
           errorMessage = 'Login failed. Please check your credentials.';
         });
       }
-
     } catch (e) {
       setState(() {
         errorMessage = 'Login failed: $e';
       });
     } finally {
       setState(() => isLoading = false);
+    }
+  }
+
+  Future<void> _handleForgotPassword() async {
+    final email = emailController.text.trim();
+
+    if (email.isEmpty || !email.contains('@')) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Please enter a valid email first.')),
+      );
+      return;
+    }
+
+    final apiKey = dotenv.env['GOOGLE_API_KEY'];
+    final url = Uri.parse(
+      'https://identitytoolkit.googleapis.com/v1/accounts:sendOobCode?key=$apiKey',
+    );
+
+    final response = await http.post(
+      url,
+      headers: {'Content-Type': 'application/json'},
+      body: json.encode({
+        'requestType': 'PASSWORD_RESET',
+        'email': email,
+      }),
+    );
+
+    if (response.statusCode == 200) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('✅ Reset email sent. Check your inbox.')),
+        );
+      }
+    } else {
+      final body = json.decode(response.body);
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('❌ Error: ${body['error']?['message'] ?? 'Try again.'}')),
+        );
+      }
+    }
+  }
+
+  Future<void> _handleGoogleSignIn() async {
+    setState(() => isLoading = true);
+    final success = await authService.signInWithGoogle();
+    if (mounted) {
+      setState(() => isLoading = false);
+      if (success) {
+        Navigator.pushReplacement(
+          context,
+          MaterialPageRoute(builder: (_) => DashboardScreen()),
+        );
+      } else {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('❌ Google Sign-In failed')),
+        );
+      }
     }
   }
 
@@ -62,7 +123,6 @@ class _LoginScreenState extends State<LoginScreen> {
           authService: authService,
           firestoreService: firestoreService,
           referredBy: 'TEMP123',
-          // referredBy: 'kn5eYjRM9sf7Scizh1F9AOfZU122',
         ),
       ),
     );
@@ -104,11 +164,23 @@ class _LoginScreenState extends State<LoginScreen> {
               ),
             ),
             const SizedBox(height: 12),
+            SizedBox(
+              height: 50,
+              child: OutlinedButton(
+                onPressed: isLoading ? null : _handleGoogleSignIn,
+                style: OutlinedButton.styleFrom(
+                  side: const BorderSide(color: Colors.redAccent),
+                ),
+                child: const Text(
+                  'Sign in with Google',
+                  style: TextStyle(fontSize: 16, color: Colors.redAccent),
+                ),
+              ),
+            ),
+            const SizedBox(height: 12),
             Center(
               child: TextButton(
-                onPressed: () {
-                  // TODO: Forgot password flow
-                },
+                onPressed: isLoading ? null : _handleForgotPassword,
                 child: const Text('Forgot Password?'),
               ),
             ),
