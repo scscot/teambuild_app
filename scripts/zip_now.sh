@@ -18,6 +18,7 @@ pubspec.yaml \
 pubspec.lock \
 ios/Podfile \
 ios/Podfile.lock \
+ios/Runner/Info.plist \
 ios/Runner/GoogleService-Info.plist \
 ios/Runner.xcworkspace/contents.xcworkspacedata \
 ios/Runner.xcodeproj/project.pbxproj \

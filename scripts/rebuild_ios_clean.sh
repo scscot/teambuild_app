@@ -42,6 +42,8 @@ pod deintegrate
 pod install --repo-update
 cd ..
 
+cp scripts/GoogleService-Info.plist ios/Runner/GoogleService-Info.plist
+
 # Step 8: Final Dart clean & metadata regeneration
 flutter clean
 flutter pub get
@@ -67,6 +69,16 @@ if [ $? -eq 0 ]; then
 else
   echo "❌ ERROR: No write permission to create Manifest.lock in $SRC_DIR/ios/Pods/"
   ls -ld "$SRC_DIR/ios/Pods"
+fi
+
+# Ensure Google URL scheme exists in Info.plist
+if ! grep -q '<string>com.googleusercontent.apps.312163687148-1di7hi57husi4s9pcn74hd2ndo2d59ss</string>' ios/Runner/Info.plist; then
+  echo "🔧 Inserting CFBundleURLTypes into Info.plist..."
+  awk '/<dict>/{print;getline;print "{SNIPPET}"; next}1' ios/Runner/Info.plist | \
+  sed "s|{SNIPPET}|<key>CFBundleURLTypes</key>\n<array>\n  <dict>\n    <key>CFBundleURLSchemes</key>\n    <array>\n      <string>com.googleusercontent.apps.312163687148-1di7hi57husi4s9pcn74hd2ndo2d59ss</string>\n    </array>\n  </dict>\n</array>|" > ios/Runner/Info.patched.plist && \
+  mv ios/Runner/Info.patched.plist ios/Runner/Info.plist
+else
+  echo "✅ URL scheme already exists in Info.plist"
 fi
 
 # Step 10: Open Xcode

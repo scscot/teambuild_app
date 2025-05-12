@@ -12,7 +12,7 @@ class DashboardScreen extends StatelessWidget {
   const DashboardScreen({Key? key}) : super(key: key);
 
   void _logout(BuildContext context) {
-    AuthService().signOut();
+    // AuthService().signOut();
     Navigator.pushAndRemoveUntil(
       context,
       MaterialPageRoute(builder: (_) => const LoginScreen()),
@@ -22,7 +22,10 @@ class DashboardScreen extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    debugPrint("📍 Entered DashboardScreen");
+
     final user = SessionManager.instance.currentUser;
+    debugPrint("👤 Dashboard user: $user");
 
     return Scaffold(
       appBar: AppBar(

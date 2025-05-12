@@ -1,7 +1,9 @@
+// PATCHED: ProfileScreen — Biometric toggle + missing date formatter restored
 import 'package:flutter/material.dart';
 import 'package:tbp/models/user_model.dart';
 import 'package:tbp/services/session_manager.dart';
 import 'package:tbp/services/firestore_service.dart';
+import 'package:tbp/services/biometric_auth_service.dart';
 import 'package:tbp/screens/edit_profile_screen.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:intl/intl.dart';
@@ -10,6 +12,16 @@ import 'package:tbp/screens/login_screen.dart';
 String formatDate(DateTime? date) {
   if (date == null) return 'Unknown';
   return DateFormat.yMMMMd().format(date);
+}
+
+String _formatDate(DateTime? date) {
+  if (date == null) return 'Unknown';
+  final months = [
+    'January', 'February', 'March', 'April', 'May', 'June',
+    'July', 'August', 'September', 'October', 'November', 'December'
+  ];
+  final monthName = months[date.month - 1];
+  return '$monthName ${date.day}, ${date.year}';
 }
 
 class ProfileScreen extends StatefulWidget {
@@ -21,11 +33,13 @@ class ProfileScreen extends StatefulWidget {
 
 class _ProfileScreenState extends State<ProfileScreen> {
   String? sponsorName;
+  bool biometricsEnabled = false;
 
   @override
   void initState() {
     super.initState();
     _loadSponsorName();
+    _loadBiometricPreference();
   }
 
   Future<void> _loadSponsorName() async {
@@ -39,9 +53,30 @@ class _ProfileScreenState extends State<ProfileScreen> {
           });
         }
       } catch (e) {
-        debugPrint('Error fetching sponsor name: \$e');
+        debugPrint('Error fetching sponsor name: $e');
       }
     }
+  }
+
+  Future<void> _loadBiometricPreference() async {
+    final enabled = await BiometricAuthService().getBiometricPreference();
+    if (mounted) setState(() => biometricsEnabled = enabled);
+  }
+
+  Future<void> _toggleBiometric(bool enabled) async {
+    if (enabled) {
+      final available = await BiometricAuthService().isBiometricAvailable();
+      if (!available) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Biometric authentication is not available on this device.')),
+        );
+        return;
+      }
+      await BiometricAuthService().setBiometricPreference(true);
+    } else {
+      await BiometricAuthService().clearBiometricPreference();
+    }
+    setState(() => biometricsEnabled = enabled);
   }
 
   @override
@@ -103,6 +138,13 @@ class _ProfileScreenState extends State<ProfileScreen> {
             if (sponsorName != null && sponsorName!.isNotEmpty)
               _infoRow('Your Sponsor', sponsorName!),
             const SizedBox(height: 24),
+            SwitchListTile(
+              title: const Text('Enable Face ID / Touch ID Login'),
+              value: biometricsEnabled,
+              onChanged: _toggleBiometric,
+              activeColor: Colors.indigo,
+            ),
+            const SizedBox(height: 12),
             Center(
               child: ElevatedButton(
                 onPressed: () async {
@@ -164,15 +206,5 @@ class _ProfileScreenState extends State<ProfileScreen> {
         ],
       ),
     );
-  }
-
-  String _formatDate(DateTime? date) {
-    if (date == null) return 'Unknown';
-    final months = [
-      'January', 'February', 'March', 'April', 'May', 'June',
-      'July', 'August', 'September', 'October', 'November', 'December'
-    ];
-    final monthName = months[date.month - 1];
-    return '$monthName ${date.day}, ${date.year}';
   }
 }

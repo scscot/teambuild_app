@@ -1,3 +1,4 @@
+// PATCHED: session_manager.dart — make saveSession and saveToStorage async to persist session reliably
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:flutter/foundation.dart';
 import '../models/user_model.dart';
@@ -14,15 +15,15 @@ class SessionManager {
     currentUser = user;
   }
 
-  void saveSession({
+  Future<void> saveSession({
     required UserModel user,
     required String idToken,
     required String accessToken,
-  }) {
+  }) async {
     currentUser = user;
     _idToken = idToken;
     _accessToken = accessToken;
-    saveToStorage();
+    await saveToStorage();
     debugPrint('🧠 Session UID after save: ${currentUser?.uid}');
   }
 
@@ -35,6 +36,7 @@ class SessionManager {
       await prefs.setString('city', currentUser!.city ?? '');
       await prefs.setString('state', currentUser!.state ?? '');
       await prefs.setString('country', currentUser!.country ?? '');
+      debugPrint('💾 Stored session for UID: ${currentUser!.uid}');
     }
   }
 
@@ -47,6 +49,9 @@ class SessionManager {
     final state = prefs.getString('state');
     final country = prefs.getString('country');
 
+    debugPrint('🔍 Session keys in prefs: ${prefs.getKeys()}');
+    debugPrint('🧠 Loaded raw values: uid=$uid, email=$email, fullName=$fullName');
+
     if (uid != null && email != null && fullName != null) {
       currentUser = UserModel(
         uid: uid,
@@ -57,22 +62,25 @@ class SessionManager {
         state: state,
         country: country,
       );
-      debugPrint('🧠 Session restored for UID: $uid');
+      debugPrint('✅ Session restored for UID: $uid');
+    } else {
+      debugPrint('⚠️ No valid session found in SharedPreferences');
     }
   }
 
   String? get idToken => _idToken;
   String? get accessToken => _accessToken;
 
-Future<void> clear() async {
-  currentUser = null;
-  _idToken = null;
-  _accessToken = null;
-}
+  Future<void> clear() async {
+    currentUser = null;
+    _idToken = null;
+    _accessToken = null;
+  }
 
   Future<void> signOut() async {
     clear();
     final prefs = await SharedPreferences.getInstance();
     await prefs.clear();
+    debugPrint('🚪 Session cleared from memory and SharedPreferences');
   }
 }
