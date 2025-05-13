@@ -1,5 +1,7 @@
-// PATCHED: ProfileScreen — Biometric toggle + missing date formatter restored
+// PATCHED: Added profile photo upload (camera + gallery) support, preserving original structure
+import 'dart:io';
 import 'package:flutter/material.dart';
+import 'package:image_picker/image_picker.dart';
 import 'package:tbp/models/user_model.dart';
 import 'package:tbp/services/session_manager.dart';
 import 'package:tbp/services/firestore_service.dart';
@@ -12,16 +14,6 @@ import 'package:tbp/screens/login_screen.dart';
 String formatDate(DateTime? date) {
   if (date == null) return 'Unknown';
   return DateFormat.yMMMMd().format(date);
-}
-
-String _formatDate(DateTime? date) {
-  if (date == null) return 'Unknown';
-  final months = [
-    'January', 'February', 'March', 'April', 'May', 'June',
-    'July', 'August', 'September', 'October', 'November', 'December'
-  ];
-  final monthName = months[date.month - 1];
-  return '$monthName ${date.day}, ${date.year}';
 }
 
 class ProfileScreen extends StatefulWidget {
@@ -79,6 +71,48 @@ class _ProfileScreenState extends State<ProfileScreen> {
     setState(() => biometricsEnabled = enabled);
   }
 
+  Future<void> _pickImage(ImageSource source) async {
+    final picker = ImagePicker();
+    final pickedFile = await picker.pickImage(source: source, imageQuality: 70);
+    if (pickedFile != null) {
+      final photoUrl = pickedFile.path;
+      final user = SessionManager.instance.currentUser;
+      if (user != null) {
+        await FirestoreService().updateUserProfile(user.uid, {'photoUrl': photoUrl});
+        SessionManager.instance.persistUser(user.copyWith(photoUrl: photoUrl));
+        setState(() {});
+      }
+    }
+  }
+
+  void _showImageSourceSheet() {
+    showModalBottomSheet(
+      context: context,
+      builder: (context) => SafeArea(
+        child: Wrap(
+          children: [
+            ListTile(
+              leading: const Icon(Icons.camera_alt),
+              title: const Text('Take Photo'),
+              onTap: () {
+                Navigator.pop(context);
+                _pickImage(ImageSource.camera);
+              },
+            ),
+            ListTile(
+              leading: const Icon(Icons.photo_library),
+              title: const Text('Choose from Library'),
+              onTap: () {
+                Navigator.pop(context);
+                _pickImage(ImageSource.gallery);
+              },
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     final user = SessionManager.instance.currentUser;
@@ -94,9 +128,9 @@ class _ProfileScreenState extends State<ProfileScreen> {
             icon: const Icon(Icons.logout),
             onPressed: () async {
               await SessionManager.instance.signOut();
-              final navigator = Navigator.of(context);
               if (mounted) {
-                navigator.pushAndRemoveUntil(
+                Navigator.pushAndRemoveUntil(
+                  context,
                   MaterialPageRoute(builder: (_) => const LoginScreen()),
                   (route) => false,
                 );
@@ -110,22 +144,24 @@ class _ProfileScreenState extends State<ProfileScreen> {
         child: Column(
           children: [
             Center(
-              child: Stack(
-                alignment: Alignment.bottomRight,
-                children: [
-                  CircleAvatar(
-                    radius: 50,
-                    backgroundColor: Colors.grey.shade300,
-                    backgroundImage: NetworkImage(
-                      user.photoUrl ?? 'https://www.gravatar.com/avatar/placeholder?s=200&d=mp',
+              child: GestureDetector(
+                onTap: _showImageSourceSheet,
+                child: Stack(
+                  alignment: Alignment.bottomRight,
+                  children: [
+                    CircleAvatar(
+                      radius: 50,
+                      backgroundColor: Colors.grey.shade300,
+                      backgroundImage: user.photoUrl != null ? FileImage(File(user.photoUrl!)) : null,
+                      child: user.photoUrl == null ? const Icon(Icons.person, size: 40, color: Colors.white) : null,
                     ),
-                  ),
-                  CircleAvatar(
-                    radius: 16,
-                    backgroundColor: Colors.white,
-                    child: Icon(Icons.camera_alt, size: 18, color: Colors.grey.shade700),
-                  )
-                ],
+                    CircleAvatar(
+                      radius: 16,
+                      backgroundColor: Colors.white,
+                      child: Icon(Icons.camera_alt, size: 18, color: Colors.grey.shade700),
+                    )
+                  ],
+                ),
               ),
             ),
             const SizedBox(height: 24),

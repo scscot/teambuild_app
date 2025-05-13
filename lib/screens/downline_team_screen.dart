@@ -73,12 +73,12 @@ class _DownlineTeamScreenState extends State<DownlineTeamScreen> {
     }
 
     if (selectedLevel >= 0) {
-      filtered = filtered.where((u) => u.level == '$selectedLevel').toList();
+      filtered = filtered.where((u) => u.level == selectedLevel).toList(); // PATCHED: compare int to int
     }
 
     levelCounts = {};
     for (var u in fullTeam) {
-      final lvl = int.tryParse(u.level ?? '-1') ?? -1;
+      final lvl = u.level ?? -1; // PATCHED: no need to parse int
       levelCounts[lvl] = (levelCounts[lvl] ?? 0) + 1;
     }
 
@@ -129,7 +129,7 @@ class _DownlineTeamScreenState extends State<DownlineTeamScreen> {
                       final u = visibleTeam[index];
                       final dt = u.createdAt;
                       return ListTile(
-                        title: Text(u.fullName),
+                        title: Text(u.fullName ?? 'Unnamed'), // PATCHED: fallback for null fullName
                         subtitle: Text('${u.email}\nJoined ${dt.month}/${dt.day}/${dt.year}'),
                         isThreeLine: true,
                         trailing: Text('L${u.level ?? '-'}'),

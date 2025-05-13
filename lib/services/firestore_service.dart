@@ -8,6 +8,7 @@ import 'package:tbp/models/user_model.dart';
 
 class FirestoreService {
   final String projectId = 'teambuilder-plus-fe74d';
+  final usersCollection = FirebaseFirestore.instance.collection('users');
 
   Future<Map<String, dynamic>?> getUserProfileByEmail(String email) async {
     final url = Uri.parse(
@@ -127,5 +128,9 @@ class FirestoreService {
       debugPrint('❌ Error in getUserProfileById: $e');
     }
     return null;
+  }
+
+  Future<void> updateUserProfile(String uid, Map<String, dynamic> data) async {
+    await usersCollection.doc(uid).update(data);
   }
 }
