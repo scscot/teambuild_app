@@ -5,6 +5,7 @@ import 'package:http/http.dart' as http;
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/foundation.dart';
 import 'package:tbp/models/user_model.dart';
+import 'session_manager.dart';
 
 class FirestoreService {
   final String projectId = 'teambuilder-plus-fe74d';
@@ -117,18 +118,37 @@ class FirestoreService {
     );
   }
 
-  Future<UserModel?> getUserProfileById(String uid) async {
+  Future<UserModel?> getUserProfile(String uid) async {
     try {
-      final doc = await FirebaseFirestore.instance.collection('users').doc(uid).get();
-      if (doc.exists) {
-        debugPrint('📥 Fetched Firestore doc for UID: $uid => ${doc.data()}');
-        return UserModel.fromJson(doc.data()!);
+      final accessToken = SessionManager.instance.accessToken;
+
+      final url = Uri.parse(
+        'https://firestore.googleapis.com/v1/projects/teambuilder-plus-fe74d/databases/(default)/documents/users/$uid',
+      );
+
+      final response = await http.get(
+        url,
+        headers: {
+          'Authorization': 'Bearer $accessToken',
+          'Content-Type': 'application/json',
+        },
+      );
+
+      if (response.statusCode == 200) {
+        final Map<String, dynamic> data = json.decode(response.body);
+        return UserModel.fromFirestore(data);
+      } else {
+        print('❌ Failed to load user profile: ${response.body}');
+        return null;
       }
     } catch (e) {
-      debugPrint('❌ Error in getUserProfileById: $e');
+      print('❌ Exception in getUserProfile: $e');
+      return null;
     }
-    return null;
   }
+
+  Future<UserModel?> getUserProfileById(String uid) => getUserProfile(uid);
+
 
   Future<void> updateUserProfile(String uid, Map<String, dynamic> data) async {
     await usersCollection.doc(uid).update(data);

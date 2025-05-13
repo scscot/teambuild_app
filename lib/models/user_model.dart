@@ -43,6 +43,24 @@ class UserModel {
     );
   }
 
+  factory UserModel.fromFirestore(Map<String, dynamic> data) {
+  final fields = data['fields'] ?? {};
+  return UserModel(
+    uid: data['name']?.split('/')?.last ?? '',
+    email: fields['email']?['stringValue'] ?? '',
+    fullName: fields['fullName']?['stringValue'] ?? '',
+    createdAt: DateTime.tryParse(fields['createdAt']?['timestampValue'] ?? '') ?? DateTime.now(),
+    city: fields['city']?['stringValue'],
+    state: fields['state']?['stringValue'],
+    country: fields['country']?['stringValue'],
+    referredBy: fields['referredBy']?['stringValue'],
+    photoUrl: fields['photoUrl']?['stringValue'],
+    level: fields['level']?['integerValue'] != null
+        ? int.tryParse(fields['level']!['integerValue'])
+        : null,
+  );
+}
+
   Map<String, dynamic> toJson() {
     return {
       'uid': uid,

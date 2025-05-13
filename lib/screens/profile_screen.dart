@@ -10,6 +10,7 @@ import 'package:tbp/screens/edit_profile_screen.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:intl/intl.dart';
 import 'package:tbp/screens/login_screen.dart';
+import 'package:firebase_storage/firebase_storage.dart';
 
 String formatDate(DateTime? date) {
   if (date == null) return 'Unknown';
@@ -72,18 +73,56 @@ class _ProfileScreenState extends State<ProfileScreen> {
   }
 
   Future<void> _pickImage(ImageSource source) async {
+    UserModel? _user;
+    File? _image;
     final picker = ImagePicker();
     final pickedFile = await picker.pickImage(source: source, imageQuality: 70);
     if (pickedFile != null) {
-      final photoUrl = pickedFile.path;
-      final user = SessionManager.instance.currentUser;
-      if (user != null) {
-        await FirestoreService().updateUserProfile(user.uid, {'photoUrl': photoUrl});
-        SessionManager.instance.persistUser(user.copyWith(photoUrl: photoUrl));
-        setState(() {});
+      setState(() {
+        _image = File(pickedFile.path);
+      });
+
+      final url = await uploadProfileImage(_image!);
+      if (url != null) {
+        final user = SessionManager.instance.currentUser;
+        if (user != null) {
+          await FirestoreService().updateUserProfile(user.uid, {'photoUrl': url});
+          SessionManager.instance.persistUser(user.copyWith(photoUrl: url));
+          setState(() {});
+        }
+      } else {
+        print('Failed to upload image or retrieve URL.');
       }
     }
   }
+
+    // PATCH START: Firebase image upload helper
+  Future<String?> uploadProfileImage(File imageFile) async {
+    try {
+      final timestamp = DateTime.now().millisecondsSinceEpoch;
+      final userId = SessionManager.instance.currentUser?.uid;
+      if (userId == null) throw Exception('No user ID found for upload path.');
+
+      print('SessionManager UID at upload: $userId');
+
+      final fileName = 'profile_$timestamp.jpg';
+      print('Firebase Storage upload target path: profile_images/$userId/$fileName');
+      
+      final storageRef = FirebaseStorage.instance
+          .ref()
+          .child('profile_images/$userId/$fileName');
+
+
+      final uploadTask = await storageRef.putFile(imageFile);
+      final downloadUrl = await uploadTask.ref.getDownloadURL();
+
+      return downloadUrl;
+    } catch (e) {
+      print('Upload error: $e');
+      return null;
+    }
+  }
+  // PATCH END
 
   void _showImageSourceSheet() {
     showModalBottomSheet(

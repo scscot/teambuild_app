@@ -21,6 +21,8 @@ dependencies:
   google_sign_in: ^6.1.5
   local_auth: ^2.1.7
   image_picker: ^1.0.7
+  firebase_storage: ^12.4.5
+  firebase_auth: ^5.5.3
 
 dev_dependencies:
   flutter_test:

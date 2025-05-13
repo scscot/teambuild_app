@@ -7,8 +7,11 @@ import 'package:google_sign_in/google_sign_in.dart';
 import 'package:tbp/models/user_model.dart';
 import 'package:tbp/services/firestore_service.dart';
 import 'package:tbp/services/session_manager.dart';
+import 'package:firebase_auth/firebase_auth.dart';
 
 class AuthService {
+  final SessionManager _sessionManager = SessionManager.instance;
+  final FirestoreService _firestoreService = FirestoreService();
   final String apiKey = dotenv.env['GOOGLE_API_KEY']!;
 
   Future<bool> signInWithGoogle() async {
@@ -19,6 +22,7 @@ class AuthService {
       final googleAuth = await googleUser.authentication;
       final idToken = googleAuth.idToken;
       final accessToken = googleAuth.accessToken;
+      final projectId = 'teambuilder-plus-fe74d'; 
 
       final response = await http.post(
         Uri.parse('https://identitytoolkit.googleapis.com/v1/accounts:signInWithIdp?key=$apiKey'),
@@ -129,6 +133,20 @@ class AuthService {
     }
 
     debugPrint('❌ Login failed: user profile not found or session not saved.');
+
+    print('🔁 Attempting native Firebase sign-in for $email');
+
+    try {
+      await FirebaseAuth.instance.signInWithEmailAndPassword(
+        email: email,
+        password: password,
+      );
+      print('✅ Native Firebase Auth sign-in successful');
+    } catch (e) {
+      print('⚠️ Native Firebase Auth sign-in failed: $e');
+    }
+
+
     return false;
   }
 
@@ -181,30 +199,32 @@ class AuthService {
       final data = json.decode(response.body);
 
       if (response.statusCode == 200) {
+        final data = json.decode(response.body);
+        final idToken = data['idToken'];
+        final refreshToken = data['refreshToken'];
         final uid = data['localId'];
 
-        await FirestoreService().createUserProfile(
-          uid: uid,
-          email: email,
-          fullName: fullName,
-          country: country,
-          state: state,
-          city: city,
-          referredBy: referredBy,
-        );
+        final user = await _firestoreService.getUserProfile(uid);
+        if (user != null) {
+          _sessionManager.persistUser(user);
 
-        SessionManager.instance.currentUser = UserModel.fromJson({
-          'uid': uid,
-          'email': email,
-          'fullName': fullName,
-          'country': country,
-          'state': state,
-          'city': city,
-          'referredBy': referredBy ?? '',
-        });
+          // PATCH START: Native Firebase sign-in to enable Firebase Storage
+          try {
+            print('🔁 Attempting native Firebase sign-in for $email');
+            await FirebaseAuth.instance.signInWithEmailAndPassword(
+              email: email,
+              password: password,
+            );
+            print('✅ Native Firebase Auth sign-in successful');
+          } catch (e) {
+            print('⚠️ Native Firebase Auth sign-in failed: $e');
+          }
+          // PATCH END
 
-        return true;
-      } else {
+          return true;
+        }
+      }
+      else {
         debugPrint("Registration failed: \${data['error']?['message'] ?? 'Unknown error'}");
       }
     } catch (e) {
