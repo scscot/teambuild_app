@@ -47,6 +47,7 @@ ios/Runner.xcworkspace/
 ios/.generated/
 ios/.idea/
 ios/.DS_Store
+ios_backup*/
 
 # Xcode & macOS
 *.xcuserstate

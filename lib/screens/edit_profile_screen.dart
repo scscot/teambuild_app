@@ -1,3 +1,5 @@
+// FINAL PATCHED — edit_profile_screen.dart (replaced saveToStorage → persistUser)
+
 import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:tbp/services/session_manager.dart';
@@ -144,20 +146,17 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
       });
 
       final refreshedDoc = await FirebaseFirestore.instance.collection('users').doc(user.uid).get();
-      final refreshedData = refreshedDoc.data();
+      final refreshedData = refreshedDoc.data() ?? {};
 
-      if (refreshedData != null && refreshedData['email'] != null && refreshedData['fullName'] != null) {
-        final updatedUser = UserModel.fromJson({
-          ...refreshedData,
-          'uid': refreshedDoc.id,
-        });
+      if (refreshedData['email'] != null && refreshedData['fullName'] != null) {
+        final updatedUser = UserModel.fromFirestore(refreshedData);
 
         SessionManager.instance.saveSession(
           user: updatedUser,
           idToken: SessionManager.instance.idToken ?? '',
           accessToken: SessionManager.instance.accessToken ?? '',
         );
-        SessionManager.instance.saveToStorage();
+        await SessionManager.instance.persistUser(updatedUser); // PATCHED: replaced saveToStorage()
         debugPrint('✅ User model refreshed successfully.');
       } else {
         debugPrint('❌ Refreshed Firestore data is missing required fields.');

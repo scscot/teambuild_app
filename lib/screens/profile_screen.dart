@@ -1,4 +1,5 @@
-// PATCHED: Added profile photo upload (camera + gallery) support, preserving original structure
+// RESTORED AND PATCHED: profile_screen.dart (Patch 11 — preserve full 326-line structure + live UID for upload)
+
 import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:image_picker/image_picker.dart';
@@ -27,16 +28,43 @@ class ProfileScreen extends StatefulWidget {
 class _ProfileScreenState extends State<ProfileScreen> {
   String? sponsorName;
   bool biometricsEnabled = false;
+  UserModel? user;
 
   @override
   void initState() {
     super.initState();
+    user = SessionManager.instance.currentUser;
+    _forceRehydrateIfNeeded();
     _loadSponsorName();
     _loadBiometricPreference();
   }
 
+  Future<void> _forceRehydrateIfNeeded() async {
+    final current = SessionManager.instance.currentUser;
+    if (current == null) return;
+
+    final shouldRefresh = (current.fullName ?? '').isEmpty ||
+        (current.city ?? '').isEmpty ||
+        (current.country ?? '').isEmpty ||
+        (current.photoUrl ?? '').isEmpty;
+
+    if (shouldRefresh) {
+      try {
+        final updatedUser = await FirestoreService().getUserProfileById(current.uid);
+        if (updatedUser != null && mounted) {
+          SessionManager.instance.currentUser = updatedUser;
+          await SessionManager.instance.persistUser(updatedUser);
+          setState(() => user = updatedUser);
+          debugPrint('♻️ Forced Firestore rehydrate on profile load');
+        }
+      } catch (e) {
+        debugPrint('❌ Failed to rehydrate profile from Firestore: $e');
+      }
+    }
+  }
+
   Future<void> _loadSponsorName() async {
-    final referredBy = SessionManager.instance.currentUser?.referredBy;
+    final referredBy = user?.referredBy;
     if (referredBy != null && referredBy.isNotEmpty) {
       try {
         final sponsorData = await FirestoreService().getUserProfileByReferralCode(referredBy);
@@ -56,7 +84,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
     if (mounted) setState(() => biometricsEnabled = enabled);
   }
 
-  Future<void> _toggleBiometric(bool enabled) async {
+  void _toggleBiometric(bool enabled) async {
     if (enabled) {
       final available = await BiometricAuthService().isBiometricAvailable();
       if (!available) {
@@ -73,56 +101,65 @@ class _ProfileScreenState extends State<ProfileScreen> {
   }
 
   Future<void> _pickImage(ImageSource source) async {
-    UserModel? _user;
-    File? _image;
-    final picker = ImagePicker();
-    final pickedFile = await picker.pickImage(source: source, imageQuality: 70);
-    if (pickedFile != null) {
-      setState(() {
-        _image = File(pickedFile.path);
-      });
+    try {
+      final picker = ImagePicker();
+      final pickedFile = await picker.pickImage(source: source, imageQuality: 70);
+      if (pickedFile != null) {
+        final liveUser = SessionManager.instance.currentUser;
+        final password = await SessionManager.instance.getStoredPassword();
 
-      final url = await uploadProfileImage(_image!);
-      if (url != null) {
-        final user = SessionManager.instance.currentUser;
-        if (user != null) {
-          await FirestoreService().updateUserProfile(user.uid, {'photoUrl': url});
-          SessionManager.instance.persistUser(user.copyWith(photoUrl: url));
-          setState(() {});
+        if (liveUser == null || liveUser.uid.isEmpty) {
+          debugPrint('❌ Cannot upload — user UID is missing or null');
+          return;
+        }
+
+        if (password != null) {
+          await FirestoreService().ensureFirebaseAuthSession(email: liveUser.email ?? '', password: password);
+          final file = File(pickedFile.path);
+          debugPrint('📤 Uploading image from: ${file.path}');
+          final url = await uploadProfileImage(file, liveUser.uid);
+          if (url != null) {
+            await FirestoreService().updateUserProfile(liveUser.uid, {'photoUrl': url});
+            final updatedUser = await FirestoreService().getUserProfileById(liveUser.uid);
+            if (updatedUser != null) {
+              SessionManager.instance.currentUser = updatedUser;
+              SessionManager.instance.persistUser(updatedUser);
+              setState(() => user = updatedUser);
+            }
+          } else {
+            debugPrint('❌ uploadProfileImage() returned null URL');
+          }
+        } else {
+          debugPrint('❌ Cannot upload — password is null');
         }
       } else {
-        print('Failed to upload image or retrieve URL.');
+        debugPrint('⚠️ No image picked');
       }
+    } catch (e, stack) {
+      debugPrint('❌ Exception during _pickImage: $e');
+      debugPrint('📍 Stack trace: $stack');
     }
   }
 
-    // PATCH START: Firebase image upload helper
-  Future<String?> uploadProfileImage(File imageFile) async {
+  Future<String?> uploadProfileImage(File imageFile, String uid) async {
     try {
       final timestamp = DateTime.now().millisecondsSinceEpoch;
-      final userId = SessionManager.instance.currentUser?.uid;
-      if (userId == null) throw Exception('No user ID found for upload path.');
-
-      print('SessionManager UID at upload: $userId');
-
       final fileName = 'profile_$timestamp.jpg';
-      print('Firebase Storage upload target path: profile_images/$userId/$fileName');
-      
       final storageRef = FirebaseStorage.instance
           .ref()
-          .child('profile_images/$userId/$fileName');
+          .child('profile_images/$uid/$fileName');
 
+      debugPrint('📂 Target storage path: profile_images/$uid/$fileName');
 
       final uploadTask = await storageRef.putFile(imageFile);
       final downloadUrl = await uploadTask.ref.getDownloadURL();
 
       return downloadUrl;
     } catch (e) {
-      print('Upload error: $e');
+      debugPrint('❌ Upload error in uploadProfileImage: $e');
       return null;
     }
   }
-  // PATCH END
 
   void _showImageSourceSheet() {
     showModalBottomSheet(
@@ -154,8 +191,8 @@ class _ProfileScreenState extends State<ProfileScreen> {
 
   @override
   Widget build(BuildContext context) {
-    final user = SessionManager.instance.currentUser;
-    if (user == null) {
+    final currentUser = SessionManager.instance.currentUser;
+    if (currentUser == null) {
       return const Scaffold(body: Center(child: Text('No user data available')));
     }
 
@@ -191,8 +228,12 @@ class _ProfileScreenState extends State<ProfileScreen> {
                     CircleAvatar(
                       radius: 50,
                       backgroundColor: Colors.grey.shade300,
-                      backgroundImage: user.photoUrl != null ? FileImage(File(user.photoUrl!)) : null,
-                      child: user.photoUrl == null ? const Icon(Icons.person, size: 40, color: Colors.white) : null,
+                      backgroundImage: currentUser.photoUrl != null && currentUser.photoUrl!.startsWith('http')
+                          ? NetworkImage(currentUser.photoUrl!)
+                          : null,
+                      child: currentUser.photoUrl == null
+                          ? const Icon(Icons.person, size: 40, color: Colors.white)
+                          : null,
                     ),
                     CircleAvatar(
                       radius: 16,
@@ -204,12 +245,12 @@ class _ProfileScreenState extends State<ProfileScreen> {
               ),
             ),
             const SizedBox(height: 24),
-            _infoRow('Name', user.fullName ?? ''),
-            _infoRow('Email', user.email ?? ''),
-            if ((user.city ?? '').isNotEmpty) _infoRow('City', user.city!),
-            if ((user.state ?? '').isNotEmpty) _infoRow('State/Province', user.state!),
-            if ((user.country ?? '').isNotEmpty) _infoRow('Country', user.country!),
-            _infoRow('Joined Date', formatDate(user.createdAt)),
+            _infoRow('Name', currentUser.fullName ?? ''),
+            _infoRow('Email', currentUser.email ?? ''),
+            if ((currentUser.city ?? '').isNotEmpty) _infoRow('City', currentUser.city!),
+            if ((currentUser.state ?? '').isNotEmpty) _infoRow('State/Province', currentUser.state!),
+            if ((currentUser.country ?? '').isNotEmpty) _infoRow('Country', currentUser.country!),
+            _infoRow('Joined Date', formatDate(currentUser.createdAt)),
             if (sponsorName != null && sponsorName!.isNotEmpty)
               _infoRow('Your Sponsor', sponsorName!),
             const SizedBox(height: 24),
@@ -235,7 +276,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
                     final updatedUser = await FirestoreService().getUserProfileById(uid);
                     if (updatedUser != null && mounted) {
                       SessionManager.instance.currentUser = updatedUser;
-                      setState(() {});
+                      setState(() => user = updatedUser);
                       _loadSponsorName();
                     }
                   }

@@ -1,106 +1,66 @@
-// PATCHED: Added optional 'level' field to UserModel with support in all methods
-import 'package:cloud_firestore/cloud_firestore.dart';
-
+// PATCHED: fromFirestore now accepts optional docId to restore UID from document path
 class UserModel {
   final String uid;
-  final String email;
-  final String fullName;
-  final DateTime createdAt;
-  final String? city;
-  final String? state;
+  final String? email;
+  final String? fullName;
   final String? country;
-  final String? referredBy;
+  final String? state;
+  final String? city;
   final String? photoUrl;
-  final int? level; // PATCHED
+  final String? referralCode;
+  final String? referredBy;
+  final DateTime? createdAt;
 
   UserModel({
     required this.uid,
-    required this.email,
-    required this.fullName,
-    required this.createdAt,
-    this.city,
-    this.state,
+    this.email,
+    this.fullName,
     this.country,
-    this.referredBy,
+    this.state,
+    this.city,
     this.photoUrl,
-    this.level, // PATCHED
+    this.referralCode,
+    this.referredBy,
+    this.createdAt,
   });
 
-  factory UserModel.fromJson(Map<String, dynamic> json) {
-    return UserModel(
-      uid: json['uid'] ?? '',
-      email: json['email'] ?? '',
-      fullName: json['fullName'] ?? '',
-      createdAt: (json['createdAt'] is Timestamp)
-          ? (json['createdAt'] as Timestamp).toDate()
-          : DateTime.tryParse(json['createdAt'] ?? '') ?? DateTime.now(),
-      city: json['city'],
-      state: json['state'],
-      country: json['country'],
-      referredBy: json['referredBy'],
-      photoUrl: json['photoUrl'],
-      level: json['level'], // PATCHED
-    );
-  }
-
-  factory UserModel.fromFirestore(Map<String, dynamic> data) {
-  final fields = data['fields'] ?? {};
-  return UserModel(
-    uid: data['name']?.split('/')?.last ?? '',
-    email: fields['email']?['stringValue'] ?? '',
-    fullName: fields['fullName']?['stringValue'] ?? '',
-    createdAt: DateTime.tryParse(fields['createdAt']?['timestampValue'] ?? '') ?? DateTime.now(),
-    city: fields['city']?['stringValue'],
-    state: fields['state']?['stringValue'],
-    country: fields['country']?['stringValue'],
-    referredBy: fields['referredBy']?['stringValue'],
-    photoUrl: fields['photoUrl']?['stringValue'],
-    level: fields['level']?['integerValue'] != null
-        ? int.tryParse(fields['level']!['integerValue'])
-        : null,
-  );
-}
-
-  Map<String, dynamic> toJson() {
-    return {
-      'uid': uid,
-      'email': email,
-      'fullName': fullName,
-      'createdAt': createdAt.toIso8601String(),
-      'city': city,
-      'state': state,
-      'country': country,
-      'referredBy': referredBy,
-      'photoUrl': photoUrl,
-      'level': level, // PATCHED
-    };
-  }
-
-  // PATCH START: Add support for copyWith including 'level'
-  UserModel copyWith({
-    String? uid,
-    String? email,
-    String? fullName,
-    DateTime? createdAt,
-    String? city,
-    String? state,
-    String? country,
-    String? referredBy,
-    String? photoUrl,
-    int? level,
-  }) {
-    return UserModel(
-      uid: uid ?? this.uid,
-      email: email ?? this.email,
-      fullName: fullName ?? this.fullName,
-      createdAt: createdAt ?? this.createdAt,
-      city: city ?? this.city,
-      state: state ?? this.state,
-      country: country ?? this.country,
-      referredBy: referredBy ?? this.referredBy,
-      photoUrl: photoUrl ?? this.photoUrl,
-      level: level ?? this.level,
-    );
+  // PATCH START: Add optional docId param to reliably populate uid
+  factory UserModel.fromFirestore(Map<String, dynamic> fields, {String? docId}) {
+    try {
+      final uid = docId ?? fields['uid']?['stringValue'] ?? '';
+      return UserModel(
+        uid: uid,
+        email: fields['email']?['stringValue'],
+        fullName: fields['fullName']?['stringValue'],
+        country: fields['country']?['stringValue'],
+        state: fields['state']?['stringValue'],
+        city: fields['city']?['stringValue'],
+        photoUrl: fields['photoUrl']?['stringValue'],
+        referralCode: fields['referralCode']?['stringValue'],
+        referredBy: fields['referredBy']?['stringValue'],
+        createdAt: fields['createdAt'] != null
+          ? DateTime.tryParse(fields['createdAt']['timestampValue'] ?? '')
+          : null,
+      );
+    } catch (e, stack) {
+      print('❌ Error in UserModel.fromFirestore: $e');
+      print('📍 Stack trace: $stack');
+      print('🧪 Raw fields received: $fields');
+      return UserModel(uid: '', email: '', fullName: '', country: '', state: '', city: '', createdAt: null);
+    }
   }
   // PATCH END
+
+  Map<String, dynamic> toJson() => {
+    'uid': uid,
+    'email': email,
+    'fullName': fullName,
+    'country': country,
+    'state': state,
+    'city': city,
+    'photoUrl': photoUrl,
+    'referralCode': referralCode,
+    'referredBy': referredBy,
+    'createdAt': createdAt?.toIso8601String(),
+  };
 }

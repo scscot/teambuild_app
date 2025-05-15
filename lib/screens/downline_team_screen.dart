@@ -1,4 +1,4 @@
-// FINAL PATCHED — downline_team_screen.dart (routes Firestore access through getDownlineUsers Cloud Function)
+// FINAL PATCHED — downline_team_screen.dart (null-safe handling for DateTime on ListTile display)
 
 import 'dart:convert';
 import 'package:flutter/material.dart';
@@ -14,7 +14,9 @@ class DownlineTeamScreen extends StatefulWidget {
   State<DownlineTeamScreen> createState() => _DownlineTeamScreenState();
 }
 
+// PATCH START: Fix state class name mismatch
 class _DownlineTeamScreenState extends State<DownlineTeamScreen> {
+// PATCH END
   bool isLoading = false;
   List<UserModel> allDownlineUsers = [];
   Map<int, List<UserModel>> groupedDownline = {};
@@ -52,7 +54,14 @@ class _DownlineTeamScreenState extends State<DownlineTeamScreen> {
       }
 
       final List<dynamic> raw = json.decode(response.body);
-      allDownlineUsers = raw.map((j) => UserModel.fromJson(j)).toList();
+
+      // PATCH START: restored docId param to rehydrate UID
+      allDownlineUsers = raw.map((j) => UserModel.fromFirestore(
+        j['fields'],
+        docId: j['name'].split('/').last,
+      )).toList();
+      // PATCH END
+
       fullTeam = List.from(allDownlineUsers);
       _applyFilters();
     } catch (e) {
@@ -62,23 +71,33 @@ class _DownlineTeamScreenState extends State<DownlineTeamScreen> {
     }
   }
 
+  int? extractLevel(UserModel user) {
+    try {
+      final raw = user.toJson();
+      final rawLevel = raw['level'];
+      if (rawLevel is int) return rawLevel;
+      if (rawLevel is String) return int.tryParse(rawLevel);
+    } catch (_) {}
+    return null;
+  }
+
   void _applyFilters() {
     final now = DateTime.now();
     List<UserModel> filtered = List.from(fullTeam);
 
     if (selectedFilter == 'Last 7 Days') {
-      filtered = filtered.where((u) => u.createdAt.isAfter(now.subtract(Duration(days: 7)))).toList();
+      filtered = filtered.where((u) => u.createdAt != null && u.createdAt!.isAfter(now.subtract(Duration(days: 7)))).toList();
     } else if (selectedFilter == 'Last 30 Days') {
-      filtered = filtered.where((u) => u.createdAt.isAfter(now.subtract(Duration(days: 30)))).toList();
+      filtered = filtered.where((u) => u.createdAt != null && u.createdAt!.isAfter(now.subtract(Duration(days: 30)))).toList();
     }
 
     if (selectedLevel >= 0) {
-      filtered = filtered.where((u) => u.level == selectedLevel).toList(); // PATCHED: compare int to int
+      filtered = filtered.where((u) => extractLevel(u) == selectedLevel).toList();
     }
 
     levelCounts = {};
     for (var u in fullTeam) {
-      final lvl = u.level ?? -1; // PATCHED: no need to parse int
+      final lvl = extractLevel(u) ?? -1;
       levelCounts[lvl] = (levelCounts[lvl] ?? 0) + 1;
     }
 
@@ -128,11 +147,13 @@ class _DownlineTeamScreenState extends State<DownlineTeamScreen> {
                     itemBuilder: (context, index) {
                       final u = visibleTeam[index];
                       final dt = u.createdAt;
+                      final level = extractLevel(u);
+                      final joinedText = dt != null ? 'Joined ${dt.month}/${dt.day}/${dt.year}' : 'Join date unknown';
                       return ListTile(
-                        title: Text(u.fullName ?? 'Unnamed'), // PATCHED: fallback for null fullName
-                        subtitle: Text('${u.email}\nJoined ${dt.month}/${dt.day}/${dt.year}'),
+                        title: Text(u.fullName ?? 'Unnamed'),
+                        subtitle: Text('${u.email}\n$joinedText'),
                         isThreeLine: true,
-                        trailing: Text('L${u.level ?? '-'}'),
+                        trailing: Text('L${level ?? '-'}'),
                         onTap: () => Navigator.push(
                           context,
                           MaterialPageRoute(builder: (_) => ProfileScreen()),

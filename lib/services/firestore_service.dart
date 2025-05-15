@@ -5,12 +5,14 @@ import 'package:http/http.dart' as http;
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/foundation.dart';
 import 'package:tbp/models/user_model.dart';
+import 'package:firebase_auth/firebase_auth.dart';
 import 'session_manager.dart';
 
 class FirestoreService {
   final String projectId = 'teambuilder-plus-fe74d';
   final usersCollection = FirebaseFirestore.instance.collection('users');
 
+  // PATCH START: Return full Firestore document for proper parsing
   Future<Map<String, dynamic>?> getUserProfileByEmail(String email) async {
     final url = Uri.parse(
       'https://firestore.googleapis.com/v1/projects/$projectId/databases/(default)/documents:runQuery',
@@ -39,13 +41,12 @@ class FirestoreService {
     if (response.statusCode == 200) {
       final results = json.decode(response.body);
       if (results is List && results.isNotEmpty && results[0]['document'] != null) {
-        final doc = results[0]['document'];
-        final fields = doc['fields'] as Map<String, dynamic>;
-        return fields.map((key, value) => MapEntry(key, value['stringValue'] ?? ''));
+        return results[0]['document']; // return full document for parsing
       }
     }
     return null;
   }
+  // PATCH END
 
   Future<Map<String, dynamic>?> getUserProfileByReferralCode(String referralCode) async {
     final url = Uri.parse(
@@ -118,39 +119,52 @@ class FirestoreService {
     );
   }
 
-  Future<UserModel?> getUserProfile(String uid) async {
+  Future<UserModel?> getUserProfileById(String uid) async {
+    final accessToken = SessionManager.instance.accessToken;
+    final url = Uri.parse(
+      'https://firestore.googleapis.com/v1/projects/teambuilder-plus-fe74d/databases/(default)/documents/users/$uid',
+    );
+
     try {
-      final accessToken = SessionManager.instance.accessToken;
-
-      final url = Uri.parse(
-        'https://firestore.googleapis.com/v1/projects/teambuilder-plus-fe74d/databases/(default)/documents/users/$uid',
-      );
-
       final response = await http.get(
         url,
         headers: {
-          'Authorization': 'Bearer $accessToken',
           'Content-Type': 'application/json',
+          'Authorization': 'Bearer $accessToken',
         },
       );
 
       if (response.statusCode == 200) {
-        final Map<String, dynamic> data = json.decode(response.body);
-        return UserModel.fromFirestore(data);
+        final data = json.decode(response.body);
+        final fields = data['fields'] as Map<String, dynamic>;
+        return UserModel.fromFirestore(fields);
       } else {
         print('❌ Failed to load user profile: ${response.body}');
         return null;
       }
     } catch (e) {
-      print('❌ Exception in getUserProfile: $e');
+      print('❌ Exception fetching user profile: $e');
       return null;
     }
   }
 
-  Future<UserModel?> getUserProfileById(String uid) => getUserProfile(uid);
-
-
   Future<void> updateUserProfile(String uid, Map<String, dynamic> data) async {
     await usersCollection.doc(uid).update(data);
   }
+
+  // PATCH START: Ensure FirebaseAuth context exists for upload
+  Future<void> ensureFirebaseAuthSession({required String email, required String password}) async {
+    final currentUser = FirebaseAuth.instance.currentUser;
+    if (currentUser == null || currentUser.email != email) {
+      try {
+        await FirebaseAuth.instance.signInWithEmailAndPassword(email: email, password: password);
+        debugPrint('✅ Firebase re-auth before Storage upload complete');
+      } catch (e) {
+        debugPrint('❌ Firebase re-auth before upload failed: \$e');
+      }
+    } else {
+      debugPrint('✅ FirebaseAuth session is already active');
+    }
+  }
+  // PATCH END
 }

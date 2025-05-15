@@ -1,4 +1,4 @@
-// PATCHED: Restored and enhanced auth_service.dart with Google Sign-In fallback Firestore creation
+// PATCHED: Restored and enhanced auth_service.dart with full Firestore hydration using fromFirestore()
 import 'dart:convert';
 import 'package:http/http.dart' as http;
 import 'package:flutter_dotenv/flutter_dotenv.dart';
@@ -22,7 +22,6 @@ class AuthService {
       final googleAuth = await googleUser.authentication;
       final idToken = googleAuth.idToken;
       final accessToken = googleAuth.accessToken;
-      final projectId = 'teambuilder-plus-fe74d'; 
 
       final response = await http.post(
         Uri.parse('https://identitytoolkit.googleapis.com/v1/accounts:signInWithIdp?key=$apiKey'),
@@ -38,15 +37,14 @@ class AuthService {
       final data = json.decode(response.body);
 
       if (response.statusCode == 200 && data['email'] != null) {
-        final userProfileMap = await FirestoreService().getUserProfileByEmail(data['email']);
+        final doc = await FirestoreService().getUserProfileByEmail(data['email']);
 
         UserModel userModel;
-
-        if (userProfileMap != null) {
-          userModel = UserModel.fromJson({
-            ...userProfileMap,
-            'uid': data['localId'] ?? '',
-          });
+        if (doc != null) {
+          userModel = UserModel.fromFirestore(
+            doc['fields'],
+            docId: doc['name'].split('/').last,
+          );
         } else {
           userModel = UserModel(
             uid: data['localId'] ?? '',
@@ -58,7 +56,6 @@ class AuthService {
             referredBy: '',
             createdAt: DateTime.now(),
           );
-
           await FirestoreService().createUserProfile(
             uid: userModel.uid,
             email: userModel.email ?? '',
@@ -75,19 +72,17 @@ class AuthService {
           idToken: data['idToken'],
           accessToken: accessToken ?? '',
         );
+        await _sessionManager.persistUser(userModel);
 
         return true;
-      } else {
-        debugPrint('❌ Google Sign-In failed: ${data['error']?['message']}');
-        return false;
       }
     } catch (e) {
       debugPrint('signInWithGoogle error: $e');
-      return false;
     }
+    return false;
   }
 
-  Future<bool> signInWithEmailAndPassword(String email, String password) async {
+  Future<bool> signInWithEmailAndPassword(String email, String pw) async {
     try {
       final url = Uri.parse(
         'https://identitytoolkit.googleapis.com/v1/accounts:signInWithPassword?key=$apiKey',
@@ -98,7 +93,7 @@ class AuthService {
         headers: {'Content-Type': 'application/json'},
         body: json.encode({
           'email': email,
-          'password': password,
+          'password': pw,
           'returnSecureToken': true,
         }),
       );
@@ -108,44 +103,49 @@ class AuthService {
       if (response.statusCode == 200 && data['email'] != null) {
         final accessToken = await _exchangeRefreshToken(data['refreshToken']);
 
-        final userProfileMap = await FirestoreService().getUserProfileByEmail(data['email']);
+        final doc = await _firestoreService.getUserProfileByEmail(data['email']);
+        UserModel userModel;
 
-        if (userProfileMap != null) {
-          final userModel = UserModel.fromJson({
-            ...userProfileMap,
-            'uid': data['localId'] ?? '',
-          });
-
-          final session = SessionManager.instance;
-          session.saveSession(
-            user: userModel,
-            idToken: data['idToken'],
-            accessToken: accessToken,
+        if (doc != null) {
+          userModel = UserModel.fromFirestore(
+            doc['fields'],
+            docId: doc['name'].split('/').last,
           );
-
-          return true;
+        } else {
+          userModel = UserModel(
+            uid: data['localId'] ?? '',
+            email: data['email'],
+            fullName: '',
+            country: '',
+            state: '',
+            city: '',
+            referredBy: '',
+            createdAt: DateTime.now(),
+          );
         }
-      } else {
-        debugPrint("Login failed: \${data['error']?['message'] ?? 'Unknown error'}");
+
+        await _sessionManager.saveSession(
+          user: userModel,
+          idToken: data['idToken'],
+          accessToken: accessToken,
+        );
+        await _sessionManager.persistUser(userModel, password: pw);
+
+        return true;
       }
     } catch (e) {
-      debugPrint('AuthService error: \$e');
+      debugPrint('signInWithEmailAndPassword error: $e');
     }
-
-    debugPrint('❌ Login failed: user profile not found or session not saved.');
-
-    print('🔁 Attempting native Firebase sign-in for $email');
 
     try {
       await FirebaseAuth.instance.signInWithEmailAndPassword(
         email: email,
-        password: password,
+        password: pw,
       );
-      print('✅ Native Firebase Auth sign-in successful');
+      debugPrint('✅ Native Firebase Auth sign-in successful');
     } catch (e) {
-      print('⚠️ Native Firebase Auth sign-in failed: $e');
+      debugPrint('⚠️ Native Firebase Auth sign-in failed: $e');
     }
-
 
     return false;
   }
@@ -199,36 +199,28 @@ class AuthService {
       final data = json.decode(response.body);
 
       if (response.statusCode == 200) {
-        final data = json.decode(response.body);
-        final idToken = data['idToken'];
-        final refreshToken = data['refreshToken'];
         final uid = data['localId'];
 
-        final user = await _firestoreService.getUserProfile(uid);
-        if (user != null) {
-          _sessionManager.persistUser(user);
+        final user = await _firestoreService.getUserProfileById(uid);
 
-          // PATCH START: Native Firebase sign-in to enable Firebase Storage
+        if (user != null) {
+          await _sessionManager.persistUser(user, password: password);
+
           try {
-            print('🔁 Attempting native Firebase sign-in for $email');
             await FirebaseAuth.instance.signInWithEmailAndPassword(
               email: email,
               password: password,
             );
-            print('✅ Native Firebase Auth sign-in successful');
+            debugPrint('✅ Native Firebase Auth sign-in successful');
           } catch (e) {
-            print('⚠️ Native Firebase Auth sign-in failed: $e');
+            debugPrint('⚠️ Native Firebase Auth sign-in failed: $e');
           }
-          // PATCH END
 
           return true;
         }
       }
-      else {
-        debugPrint("Registration failed: \${data['error']?['message'] ?? 'Unknown error'}");
-      }
     } catch (e) {
-      debugPrint('createUserWithEmail error: \$e');
+      debugPrint('createUserWithEmail error: $e');
     }
     return false;
   }

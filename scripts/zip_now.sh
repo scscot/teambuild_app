@@ -8,6 +8,6 @@ lib/screens/ \
 lib/data/ \
 lib/services/ \
 lib/main.dart \
-lib/models/ \
-pubspec.yaml \
+pubspec.yaml
+
 echo "✅ tbp_files.zip created successfully."
