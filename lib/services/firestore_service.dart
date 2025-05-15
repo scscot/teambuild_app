@@ -137,7 +137,9 @@ class FirestoreService {
       if (response.statusCode == 200) {
         final data = json.decode(response.body);
         final fields = data['fields'] as Map<String, dynamic>;
-        return UserModel.fromFirestore(fields);
+        // PATCH START: pass docId to restore UID properly
+        return UserModel.fromFirestore(fields, docId: uid);
+        // PATCH END
       } else {
         print('❌ Failed to load user profile: ${response.body}');
         return null;
