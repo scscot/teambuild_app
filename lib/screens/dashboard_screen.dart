@@ -4,12 +4,39 @@ import 'package:flutter/material.dart';
 import '../services/session_manager.dart';
 import '../services/auth_service.dart';
 import '../models/user_model.dart';
+import '../services/firestore_service.dart';
 import 'profile_screen.dart';
 import 'downline_team_screen.dart';
 import 'login_screen.dart';
 
-class DashboardScreen extends StatelessWidget {
+class DashboardScreen extends StatefulWidget {
   const DashboardScreen({Key? key}) : super(key: key);
+
+  @override
+  State<DashboardScreen> createState() => _DashboardScreenState();
+}
+
+class _DashboardScreenState extends State<DashboardScreen> {
+  UserModel? user;
+
+  @override
+  void initState() {
+    super.initState();
+    debugPrint("📍 Entered DashboardScreen");
+    user = SessionManager.instance.currentUser;
+    debugPrint("👤 Dashboard user: $user");
+
+    final uid = user?.uid;
+    if (uid != null && uid.isNotEmpty) {
+      FirestoreService().getUserProfileById(uid).then((updatedUser) {
+        if (updatedUser != null && mounted) {
+          SessionManager.instance.currentUser = updatedUser;
+          SessionManager.instance.persistUser(updatedUser);
+          setState(() => user = updatedUser);
+        }
+      });
+    }
+  }
 
   void _logout(BuildContext context) {
     // AuthService().signOut();
@@ -22,10 +49,7 @@ class DashboardScreen extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    debugPrint("📍 Entered DashboardScreen");
-
-    final user = SessionManager.instance.currentUser;
-    debugPrint("👤 Dashboard user: $user");
+    final name = user?.fullName ?? 'User';
 
     return Scaffold(
       appBar: AppBar(
@@ -44,7 +68,7 @@ class DashboardScreen extends StatelessWidget {
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
             Text(
-              'Welcome, ${user?.fullName ?? 'User'}',
+              'Welcome, $name',
               style: const TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
               textAlign: TextAlign.center,
             ),
