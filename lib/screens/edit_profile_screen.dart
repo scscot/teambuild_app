@@ -1,173 +1,120 @@
-// FINAL PATCHED — edit_profile_screen.dart (replaced saveToStorage → persistUser)
+// PATCHED — Fully restored from REST-based edit_profile_screen.dart with SDK update logic
 
 import 'package:flutter/material.dart';
-import 'package:cloud_firestore/cloud_firestore.dart';
-import 'package:tbp/services/session_manager.dart';
-import 'package:tbp/models/user_model.dart';
-import '../data/states_by_country.dart';
+import '../models/user_model.dart';
+import '../services/firestore_service.dart';
+import '../services/session_manager.dart';
 
 class EditProfileScreen extends StatefulWidget {
-  const EditProfileScreen({Key? key}) : super(key: key);
+  const EditProfileScreen({super.key});
 
   @override
   State<EditProfileScreen> createState() => _EditProfileScreenState();
 }
 
 class _EditProfileScreenState extends State<EditProfileScreen> {
-  late final TextEditingController _nameController;
-  late final TextEditingController _emailController;
-  late final TextEditingController _cityController;
-  String? _selectedCountry;
-  String? _selectedState;
-
-  bool _isSaving = false;
-  String? _errorMessage;
-
-  List<String> _statesForCountry = [];
+  final _formKey = GlobalKey<FormState>();
+  late TextEditingController _firstNameController;
+  late TextEditingController _lastNameController;
+  late TextEditingController _countryController;
+  late TextEditingController _stateController;
+  late TextEditingController _cityController;
 
   @override
   void initState() {
     super.initState();
-    final initialUser = SessionManager.instance.currentUser;
-    _nameController = TextEditingController(text: initialUser?.fullName ?? '');
-    _emailController = TextEditingController(text: initialUser?.email ?? '');
-    _cityController = TextEditingController(text: initialUser?.city ?? '');
-    _selectedCountry = initialUser?.country;
-    _selectedState = initialUser?.state;
-
-    if (_selectedCountry != null && statesByCountry.containsKey(_selectedCountry)) {
-      final rawList = statesByCountry[_selectedCountry!]!;
-      _statesForCountry = rawList.map((s) => s.trim()).toSet().toList();
-    }
+    final user = SessionManager().currentUser;
+    _firstNameController = TextEditingController(text: user?.firstName ?? '');
+    _lastNameController = TextEditingController(text: user?.lastName ?? '');
+    _countryController = TextEditingController(text: user?.country ?? '');
+    _stateController = TextEditingController(text: user?.state ?? '');
+    _cityController = TextEditingController(text: user?.city ?? '');
   }
 
   @override
   void dispose() {
-    _nameController.dispose();
-    _emailController.dispose();
+    _firstNameController.dispose();
+    _lastNameController.dispose();
+    _countryController.dispose();
+    _stateController.dispose();
     _cityController.dispose();
     super.dispose();
+  }
+
+  Future<void> _saveProfile() async {
+    if (_formKey.currentState!.validate()) {
+      final currentUser = SessionManager().currentUser;
+      if (currentUser != null) {
+        final updatedData = {
+          'firstName': _firstNameController.text.trim(),
+          'lastName': _lastNameController.text.trim(),
+          'country': _countryController.text.trim(),
+          'state': _stateController.text.trim(),
+          'city': _cityController.text.trim(),
+        };
+
+        await FirestoreService().updateUser(currentUser.uid, updatedData);
+
+        final updatedUser = currentUser.copyWith(
+          firstName: _firstNameController.text.trim(),
+          lastName: _lastNameController.text.trim(),
+          country: _countryController.text.trim(),
+          state: _stateController.text.trim(),
+          city: _cityController.text.trim(),
+        );
+
+        SessionManager().setCurrentUser(updatedUser);
+
+        if (mounted) {
+          Navigator.pop(context);
+        }
+      }
+    }
   }
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(title: const Text('Edit Profile')),
-      body: SingleChildScrollView(
-        padding: const EdgeInsets.all(16),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            TextField(
-              controller: _nameController,
-              decoration: const InputDecoration(labelText: 'Full Name'),
-            ),
-            const SizedBox(height: 16),
-            DropdownButtonFormField<String>(
-              value: _selectedCountry,
-              items: statesByCountry.keys.map((country) {
-                return DropdownMenuItem(value: country, child: Text(country));
-              }).toList(),
-              onChanged: (value) {
-                setState(() {
-                  _selectedCountry = value;
-                  _selectedState = null;
-                  _statesForCountry = value != null && statesByCountry.containsKey(value)
-                      ? statesByCountry[value]!.map((s) => s.trim()).toSet().toList()
-                      : [];
-                });
-              },
-              decoration: const InputDecoration(labelText: 'Country'),
-            ),
-            const SizedBox(height: 16),
-            DropdownButtonFormField<String>(
-              value: _statesForCountry.contains(_selectedState) ? _selectedState : null,
-              items: _statesForCountry.map((state) {
-                return DropdownMenuItem(value: state, child: Text(state));
-              }).toList(),
-              onChanged: (value) {
-                setState(() => _selectedState = value);
-              },
-              decoration: const InputDecoration(labelText: 'State / Province'),
-            ),
-            const SizedBox(height: 16),
-            TextField(
-              controller: _cityController,
-              decoration: const InputDecoration(labelText: 'City'),
-            ),
-            const SizedBox(height: 24),
-            if (_errorMessage != null)
-              Padding(
-                padding: const EdgeInsets.only(bottom: 12),
-                child: Text(_errorMessage!, style: const TextStyle(color: Colors.red)),
+      appBar: AppBar(
+        title: const Text('Edit Profile'),
+      ),
+      body: Padding(
+        padding: const EdgeInsets.all(16.0),
+        child: Form(
+          key: _formKey,
+          child: ListView(
+            children: [
+              TextFormField(
+                controller: _firstNameController,
+                decoration: const InputDecoration(labelText: 'First Name'),
+                validator: (value) => value == null || value.isEmpty ? 'Required' : null,
               ),
-            Center(
-              child: ElevatedButton(
-                onPressed: _isSaving ? null : _saveChanges,
-                child: _isSaving ? const CircularProgressIndicator() : const Text('Save Changes'),
+              TextFormField(
+                controller: _lastNameController,
+                decoration: const InputDecoration(labelText: 'Last Name'),
+                validator: (value) => value == null || value.isEmpty ? 'Required' : null,
               ),
-            ),
-          ],
+              TextFormField(
+                controller: _countryController,
+                decoration: const InputDecoration(labelText: 'Country'),
+              ),
+              TextFormField(
+                controller: _stateController,
+                decoration: const InputDecoration(labelText: 'State/Province'),
+              ),
+              TextFormField(
+                controller: _cityController,
+                decoration: const InputDecoration(labelText: 'City'),
+              ),
+              const SizedBox(height: 20),
+              ElevatedButton(
+                onPressed: _saveProfile,
+                child: const Text('Save Changes'),
+              ),
+            ],
+          ),
         ),
       ),
     );
-  }
-
-  Future<void> _saveChanges() async {
-    setState(() {
-      _isSaving = true;
-      _errorMessage = null;
-    });
-
-    await SessionManager.instance.loadFromStorage();
-    var user = SessionManager.instance.currentUser;
-
-    if (user == null || user.uid.isEmpty) {
-      setState(() {
-        _isSaving = false;
-        _errorMessage = 'User session not available. Please log out and log back in.';
-      });
-      debugPrint('❌ Blocked update: UID was null or empty.');
-      return;
-    }
-
-    debugPrint('🛰️ Attempting Firestore update with:');
-    debugPrint(' - fullName: ${_nameController.text.trim()}');
-    debugPrint(' - city: ${_cityController.text.trim()}');
-    debugPrint(' - state: $_selectedState');
-    debugPrint(' - country: $_selectedCountry');
-
-    try {
-      await FirebaseFirestore.instance.collection('users').doc(user.uid).update({
-        'fullName': _nameController.text.trim(),
-        'city': _cityController.text.trim(),
-        'state': _selectedState ?? '',
-        'country': _selectedCountry ?? '',
-      });
-
-      final refreshedDoc = await FirebaseFirestore.instance.collection('users').doc(user.uid).get();
-      final refreshedData = refreshedDoc.data() ?? {};
-
-      if (refreshedData['email'] != null && refreshedData['fullName'] != null) {
-        final updatedUser = UserModel.fromFirestore(refreshedData);
-
-        SessionManager.instance.saveSession(
-          user: updatedUser,
-          idToken: SessionManager.instance.idToken ?? '',
-          accessToken: SessionManager.instance.accessToken ?? '',
-        );
-        await SessionManager.instance.persistUser(updatedUser); // PATCHED: replaced saveToStorage()
-        debugPrint('✅ User model refreshed successfully.');
-      } else {
-        debugPrint('❌ Refreshed Firestore data is missing required fields.');
-      }
-
-      if (mounted) Navigator.of(context).pop();
-    } catch (e) {
-      setState(() => _errorMessage = 'Failed to save changes. Please try again');
-      debugPrint('❌ Firestore update failed with: $e');
-    } finally {
-      if (mounted) setState(() => _isSaving = false);
-    }
   }
 }

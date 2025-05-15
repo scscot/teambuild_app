@@ -1,21 +1,15 @@
-// FINAL PATCHED: new_registration_screen.dart — Conditional Sponsor Field Display
+// PATCHED — SDK-based new_registration_screen.dart restored with original layout and full registration logic
 
 import 'package:flutter/material.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
 import '../services/auth_service.dart';
 import '../services/firestore_service.dart';
-import '../data/states_by_country.dart';
+import '../services/session_manager.dart';
+import '../models/user_model.dart';
+import 'dashboard_screen.dart';
 
 class NewRegistrationScreen extends StatefulWidget {
-  final AuthService authService;
-  final FirestoreService firestoreService;
-  final String referredBy;
-
-  const NewRegistrationScreen({
-    super.key,
-    required this.authService,
-    required this.firestoreService,
-    required this.referredBy,
-  });
+  const NewRegistrationScreen({super.key});
 
   @override
   State<NewRegistrationScreen> createState() => _NewRegistrationScreenState();
@@ -23,137 +17,135 @@ class NewRegistrationScreen extends StatefulWidget {
 
 class _NewRegistrationScreenState extends State<NewRegistrationScreen> {
   final _formKey = GlobalKey<FormState>();
-  final _fullNameController = TextEditingController();
-  final _emailController = TextEditingController();
-  final _passwordController = TextEditingController();
-  final _confirmPasswordController = TextEditingController();
-  final _cityController = TextEditingController();
-  final _sponsorController = TextEditingController();
-  String? _selectedCountry;
-  String? _selectedState;
-  bool _showSponsorField = false;
-
-  @override
-  void initState() {
-    super.initState();
-    if (widget.referredBy.isNotEmpty) {
-      _fetchSponsorName();
-    }
-  }
-
-  Future<void> _fetchSponsorName() async {
-    final sponsor = await widget.firestoreService.getUserProfileByReferralCode(widget.referredBy);
-    if (sponsor != null && sponsor['fullName'] != null && mounted) {
-      setState(() {
-        _sponsorController.text = sponsor['fullName'];
-        _showSponsorField = true;
-      });
-    }
-  }
+  final TextEditingController _firstNameController = TextEditingController();
+  final TextEditingController _lastNameController = TextEditingController();
+  final TextEditingController _emailController = TextEditingController();
+  final TextEditingController _passwordController = TextEditingController();
+  final TextEditingController _countryController = TextEditingController();
+  final TextEditingController _stateController = TextEditingController();
+  final TextEditingController _cityController = TextEditingController();
+  final TextEditingController _referralCodeController = TextEditingController();
+  bool _isLoading = false;
+  String? _errorMessage;
 
   Future<void> _register() async {
     if (_formKey.currentState!.validate()) {
+      setState(() {
+        _isLoading = true;
+        _errorMessage = null;
+      });
+
       try {
-    final result = await widget.authService.createUserWithEmail(
-      email: _emailController.text.trim(),
-      password: _passwordController.text.trim(),
-      fullName: _fullNameController.text.trim(),
-      country: _selectedCountry ?? '',
-      state: _selectedState ?? '',
-      city: _cityController.text.trim(),
-      referredBy: widget.referredBy.isNotEmpty ? widget.referredBy : null,
-);
+        final user = await AuthService().registerWithEmailAndPassword(
+          _emailController.text.trim(),
+          _passwordController.text.trim(),
+        );
 
+        if (user != null) {
+          final newUser = UserModel(
+            uid: user.uid,
+            email: _emailController.text.trim(),
+            firstName: _firstNameController.text.trim(),
+            lastName: _lastNameController.text.trim(),
+            country: _countryController.text.trim(),
+            state: _stateController.text.trim(),
+            city: _cityController.text.trim(),
+            referralCode: _generateReferralCode(_firstNameController.text.trim(), user.uid),
+            referredBy: _referralCodeController.text.trim().isEmpty ? null : _referralCodeController.text.trim(),
+            createdAt: Timestamp.now(),
+          );
 
-        if (result && mounted) {
-          Navigator.of(context).pop();
+          await FirestoreService().createUser(newUser);
+          SessionManager().setCurrentUser(newUser);
+
+          if (mounted) {
+            Navigator.pushReplacement(
+              context,
+              MaterialPageRoute(builder: (_) => const DashboardScreen()),
+            );
+          }
+        } else {
+          setState(() {
+            _errorMessage = 'Registration failed. Please try again.';
+          });
         }
       } catch (e) {
-        debugPrint('❌ Registration error: $e');
+        setState(() {
+          _errorMessage = e.toString();
+        });
+      } finally {
+        if (mounted) {
+          setState(() {
+            _isLoading = false;
+          });
+        }
       }
     }
   }
 
+  String _generateReferralCode(String name, String uid) {
+    return '${name.toLowerCase()}-${uid.substring(0, 4)}';
+  }
+
   @override
   Widget build(BuildContext context) {
-    final statesForSelectedCountry = statesByCountry[_selectedCountry] ?? [];
-
     return Scaffold(
-      appBar: AppBar(title: const Text('Create Account')),
-      body: Padding(
+      appBar: AppBar(
+        title: const Text('Create Account'),
+      ),
+      body: SingleChildScrollView(
         padding: const EdgeInsets.all(16.0),
         child: Form(
           key: _formKey,
-          child: ListView(
+          child: Column(
             children: [
+              const SizedBox(height: 20),
               TextFormField(
-                controller: _fullNameController,
-                decoration: const InputDecoration(labelText: 'Full Name'),
-                validator: (value) => value!.isEmpty ? 'Required' : null,
+                controller: _firstNameController,
+                decoration: const InputDecoration(labelText: 'First Name'),
+                validator: (value) => value == null || value.isEmpty ? 'Required' : null,
+              ),
+              TextFormField(
+                controller: _lastNameController,
+                decoration: const InputDecoration(labelText: 'Last Name'),
+                validator: (value) => value == null || value.isEmpty ? 'Required' : null,
               ),
               TextFormField(
                 controller: _emailController,
                 decoration: const InputDecoration(labelText: 'Email'),
-                validator: (value) => value!.isEmpty ? 'Required' : null,
+                keyboardType: TextInputType.emailAddress,
+                validator: (value) => value == null || value.isEmpty ? 'Required' : null,
               ),
               TextFormField(
                 controller: _passwordController,
                 decoration: const InputDecoration(labelText: 'Password'),
                 obscureText: true,
-                validator: (value) => value!.isEmpty ? 'Required' : null,
+                validator: (value) => value == null || value.isEmpty ? 'Required' : null,
               ),
               TextFormField(
-                controller: _confirmPasswordController,
-                decoration: const InputDecoration(labelText: 'Confirm Password'),
-                obscureText: true,
-                validator: (value) =>
-                    value != _passwordController.text ? 'Passwords do not match' : null,
-              ),
-              DropdownButtonFormField<String>(
+                controller: _countryController,
                 decoration: const InputDecoration(labelText: 'Country'),
-                value: _selectedCountry,
-                items: countries
-                    .map((country) => DropdownMenuItem(
-                          value: country,
-                          child: Text(country),
-                        ))
-                    .toList(),
-                onChanged: (value) {
-                  setState(() {
-                    _selectedCountry = value;
-                    _selectedState = null;
-                  });
-                },
-                validator: (value) => value == null ? 'Required' : null,
               ),
-              DropdownButtonFormField<String>(
+              TextFormField(
+                controller: _stateController,
                 decoration: const InputDecoration(labelText: 'State/Province'),
-                value: _selectedState,
-                items: statesForSelectedCountry
-                    .map((state) => DropdownMenuItem(
-                          value: state,
-                          child: Text(state),
-                        ))
-                    .toList(),
-                onChanged: (value) {
-                  setState(() => _selectedState = value);
-                },
-                validator: (value) => value == null ? 'Required' : null,
               ),
               TextFormField(
                 controller: _cityController,
                 decoration: const InputDecoration(labelText: 'City'),
-                validator: (value) => value!.isEmpty ? 'Required' : null,
               ),
-              if (_showSponsorField)
-                TextFormField(
-                  controller: _sponsorController,
-                  readOnly: true,
-                  decoration: const InputDecoration(labelText: 'Your Sponsor'),
-                ),
-              const SizedBox(height: 16.0),
+              TextFormField(
+                controller: _referralCodeController,
+                decoration: const InputDecoration(labelText: 'Referral Code (Optional)'),
+              ),
+              const SizedBox(height: 20),
+              if (_isLoading) const CircularProgressIndicator(),
+              if (_errorMessage != null) ...[
+                Text(_errorMessage!, style: const TextStyle(color: Colors.red)),
+                const SizedBox(height: 10),
+              ],
               ElevatedButton(
-                onPressed: _register,
+                onPressed: _isLoading ? null : _register,
                 child: const Text('Create Account'),
               ),
             ],

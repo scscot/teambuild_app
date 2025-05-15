@@ -1,15 +1,1 @@
-{
-  "functions": [
-    {
-      "source": "functions",
-      "codebase": "default",
-      "ignore": [
-        "node_modules",
-        ".git",
-        "firebase-debug.log",
-        "firebase-debug.*.log",
-        "*.local"
-      ]
-    }
-  ]
-}
+{"functions":[{"source":"functions","codebase":"default","ignore":["node_modules",".git","firebase-debug.log","firebase-debug.*.log","*.local"]}],"flutter":{"platforms":{"android":{"default":{"projectId":"teambuilder-plus-fe74d","appId":"1:312163687148:android:e3df886cab95a1123763c9","fileOutput":"android/app/google-services.json"}},"ios":{"default":{"projectId":"teambuilder-plus-fe74d","appId":"1:312163687148:ios:bd91b4716a6330973763c9","uploadDebugSymbols":false,"fileOutput":"ios/Runner/GoogleService-Info.plist"}},"macos":{"default":{"projectId":"teambuilder-plus-fe74d","appId":"1:312163687148:ios:90150363c309cdbb3763c9","uploadDebugSymbols":false,"fileOutput":"macos/Runner/GoogleService-Info.plist"}},"dart":{"lib/firebase_options.dart":{"projectId":"teambuilder-plus-fe74d","configurations":{"android":"1:312163687148:android:e3df886cab95a1123763c9","ios":"1:312163687148:ios:bd91b4716a6330973763c9","macos":"1:312163687148:ios:90150363c309cdbb3763c9","web":"1:312163687148:web:43385dff773dab0b3763c9","windows":"1:312163687148:web:8e612b240cf864363763c9"}}}}}}
