@@ -1,4 +1,8 @@
+// PATCHED — session_manager.dart with implemented getHomeScreen method
+
+import 'package:flutter/material.dart';
 import '../models/user_model.dart';
+import '../screens/dashboard_screen.dart';
 
 class SessionManager {
   static final SessionManager _instance = SessionManager._internal();
@@ -7,22 +11,15 @@ class SessionManager {
 
   SessionManager._internal();
 
-  UserModel? _currentUser;
+  UserModel? currentUser;
+
+  bool isLoggedIn() => currentUser != null;
 
   void setCurrentUser(UserModel user) {
-    _currentUser = user;
+    currentUser = user;
   }
 
-  UserModel? get currentUser => _currentUser;
-
-  bool isLoggedIn() => _currentUser != null;
-
-  void clearSession() {
-    _currentUser = null;
-  }
-
-  dynamic getHomeScreen() {
-    // Placeholder for routing to the home screen, typically Dashboard
-    throw UnimplementedError('Define getHomeScreen routing logic.');
+  Widget getHomeScreen() {
+    return const DashboardScreen();
   }
 }

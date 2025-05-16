@@ -1,42 +1,63 @@
+// PATCHED — firestore_service.dart with updateUser() method
+
 import 'package:cloud_firestore/cloud_firestore.dart';
 import '../models/user_model.dart';
 
 class FirestoreService {
   final FirebaseFirestore _firestore = FirebaseFirestore.instance;
 
-  Future<void> createUser(UserModel user) async {
-    await _firestore.collection('users').doc(user.uid).set(user.toMap());
+  Future<void> createUser(Map<String, dynamic> userMap) async {
+    final String uid = userMap['uid'];
+    await _firestore.collection('users').doc(uid).set(userMap);
+  }
+
+  Future<Map<String, dynamic>?> getUserData(String uid) async {
+    final doc = await _firestore.collection('users').doc(uid).get();
+    if (doc.exists) {
+      return doc.data();
+    }
+    return null;
   }
 
   Future<UserModel?> getUser(String uid) async {
-    final DocumentSnapshot doc = await _firestore.collection('users').doc(uid).get();
+    final doc = await _firestore.collection('users').doc(uid).get();
     if (doc.exists) {
       return UserModel.fromFirestore(doc);
     }
     return null;
   }
 
-  Future<void> updateUser(String uid, Map<String, dynamic> data) async {
-    await _firestore.collection('users').doc(uid).update(data);
+  Future<void> updateUser(String uid, Map<String, dynamic> updates) async {
+    await _firestore.collection('users').doc(uid).update(updates);
   }
 
-  Future<List<UserModel>> getDownlineUsers(String referredByUid) async {
-    final QuerySnapshot snapshot = await _firestore
+  Future<String> getUserFullName(String uid) async {
+    try {
+      final doc = await _firestore.collection('users').doc(uid).get();
+      final data = doc.data();
+      if (data == null) return 'N/A';
+
+      if (data['fullName'] != null && data['fullName'] is String) {
+        return data['fullName'];
+      } else if (data['firstName'] != null && data['lastName'] != null) {
+        return '${data['firstName']} ${data['lastName']}';
+      } else {
+        return 'N/A';
+      }
+    } catch (e) {
+      print('❌ Error retrieving user full name: $e');
+      return 'N/A';
+    }
+  }
+
+  Future<List<UserModel>> getDownlineUsers(String referredBy) async {
+    final querySnapshot = await _firestore
         .collection('users')
-        .where('referredBy', isEqualTo: referredByUid)
+        .where('referredBy', isEqualTo: referredBy)
         .get();
 
-    return snapshot.docs.map((doc) => UserModel.fromFirestore(doc)).toList();
-  }
-
-  Future<String?> getUserFullName(String uid) async {
-    final DocumentSnapshot doc = await _firestore.collection('users').doc(uid).get();
-    if (doc.exists) {
-      final data = doc.data() as Map<String, dynamic>;
-      final firstName = data['firstName'] ?? '';
-      final lastName = data['lastName'] ?? '';
-      return '$firstName $lastName'.trim();
-    }
-    return null;
+    return querySnapshot.docs
+        .map((doc) => UserModel.fromFirestore(doc))
+        .toList();
   }
 }

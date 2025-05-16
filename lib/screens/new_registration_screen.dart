@@ -52,10 +52,10 @@ class _NewRegistrationScreenState extends State<NewRegistrationScreen> {
             city: _cityController.text.trim(),
             referralCode: _generateReferralCode(_firstNameController.text.trim(), user.uid),
             referredBy: _referralCodeController.text.trim().isEmpty ? null : _referralCodeController.text.trim(),
-            createdAt: Timestamp.now(),
+            createdAt: DateTime.now(),
           );
 
-          await FirestoreService().createUser(newUser);
+          await FirestoreService().createUser(newUser.toMap());
           SessionManager().setCurrentUser(newUser);
 
           if (mounted) {
