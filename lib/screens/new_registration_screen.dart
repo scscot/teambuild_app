@@ -1,4 +1,4 @@
-// PATCHED — SDK-based new_registration_screen.dart restored with original layout and full registration logic
+// PATCHED — new_registration_screen.dart with password confirmation, dynamic country/state dropdowns, sponsor display
 
 import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
@@ -7,9 +7,11 @@ import '../services/firestore_service.dart';
 import '../services/session_manager.dart';
 import '../models/user_model.dart';
 import 'dashboard_screen.dart';
+import '../data/states_by_country.dart';
 
 class NewRegistrationScreen extends StatefulWidget {
-  const NewRegistrationScreen({super.key});
+  final String? referredBy;
+  const NewRegistrationScreen({super.key, this.referredBy});
 
   @override
   State<NewRegistrationScreen> createState() => _NewRegistrationScreenState();
@@ -21,12 +23,42 @@ class _NewRegistrationScreenState extends State<NewRegistrationScreen> {
   final TextEditingController _lastNameController = TextEditingController();
   final TextEditingController _emailController = TextEditingController();
   final TextEditingController _passwordController = TextEditingController();
-  final TextEditingController _countryController = TextEditingController();
-  final TextEditingController _stateController = TextEditingController();
+  final TextEditingController _confirmPasswordController = TextEditingController();
   final TextEditingController _cityController = TextEditingController();
-  final TextEditingController _referralCodeController = TextEditingController();
   bool _isLoading = false;
   String? _errorMessage;
+  String _selectedCountry = 'United States';
+  String? _selectedState;
+  String? _sponsorName;
+  String? _referralCodeToSave;
+
+  List<String> get _statesForSelectedCountry {
+    return countryStateMap[_selectedCountry] ?? [];
+  }
+
+  @override
+  void initState() {
+    super.initState();
+    _lookupSponsor();
+  }
+
+  Future<void> _lookupSponsor() async {
+    if (widget.referredBy != null && widget.referredBy!.isNotEmpty) {
+      final snapshot = await FirebaseFirestore.instance
+          .collection('users')
+          .where('referralCode', isEqualTo: widget.referredBy!)
+          .limit(1)
+          .get();
+
+      if (snapshot.docs.isNotEmpty) {
+        final data = snapshot.docs.first.data();
+        setState(() {
+          _sponsorName = '${data['firstName'] ?? ''} ${data['lastName'] ?? ''}'.trim();
+          _referralCodeToSave = widget.referredBy;
+        });
+      }
+    }
+  }
 
   Future<void> _register() async {
     if (_formKey.currentState!.validate()) {
@@ -47,11 +79,11 @@ class _NewRegistrationScreenState extends State<NewRegistrationScreen> {
             email: _emailController.text.trim(),
             firstName: _firstNameController.text.trim(),
             lastName: _lastNameController.text.trim(),
-            country: _countryController.text.trim(),
-            state: _stateController.text.trim(),
+            country: _selectedCountry,
+            state: _selectedState,
             city: _cityController.text.trim(),
             referralCode: _generateReferralCode(_firstNameController.text.trim(), user.uid),
-            referredBy: _referralCodeController.text.trim().isEmpty ? null : _referralCodeController.text.trim(),
+            referredBy: _referralCodeToSave,
             createdAt: DateTime.now(),
           );
 
@@ -123,21 +155,57 @@ class _NewRegistrationScreenState extends State<NewRegistrationScreen> {
                 validator: (value) => value == null || value.isEmpty ? 'Required' : null,
               ),
               TextFormField(
-                controller: _countryController,
+                controller: _confirmPasswordController,
+                decoration: const InputDecoration(labelText: 'Confirm Password'),
+                obscureText: true,
+                validator: (value) => value != _passwordController.text ? 'Passwords do not match' : null,
+              ),
+              const SizedBox(height: 12),
+              DropdownButtonFormField<String>(
+                value: _selectedCountry,
+                items: countryStateMap.keys
+                    .map((country) => DropdownMenuItem(
+                          value: country,
+                          child: Text(country),
+                        ))
+                    .toList(),
+                onChanged: (value) {
+                  setState(() {
+                    _selectedCountry = value!;
+                    _selectedState = null;
+                  });
+                },
                 decoration: const InputDecoration(labelText: 'Country'),
               ),
-              TextFormField(
-                controller: _stateController,
+              DropdownButtonFormField<String>(
+                value: _selectedState,
+                items: _statesForSelectedCountry
+                    .map((state) => DropdownMenuItem(
+                          value: state,
+                          child: Text(state),
+                        ))
+                    .toList(),
+                onChanged: (value) {
+                  setState(() {
+                    _selectedState = value;
+                  });
+                },
                 decoration: const InputDecoration(labelText: 'State/Province'),
               ),
               TextFormField(
                 controller: _cityController,
                 decoration: const InputDecoration(labelText: 'City'),
               ),
-              TextFormField(
-                controller: _referralCodeController,
-                decoration: const InputDecoration(labelText: 'Referral Code (Optional)'),
-              ),
+              if (_sponsorName != null)
+                Padding(
+                  padding: const EdgeInsets.only(top: 12.0, bottom: 6.0),
+                  child: Row(
+                    children: [
+                      const Text('Your Sponsor: ', style: TextStyle(fontWeight: FontWeight.bold)),
+                      Text(_sponsorName!)
+                    ],
+                  ),
+                ),
               const SizedBox(height: 20),
               if (_isLoading) const CircularProgressIndicator(),
               if (_errorMessage != null) ...[

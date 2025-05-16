@@ -1,8 +1,5 @@
-// PATCHED — Exact REST-based dashboard_screen.dart layout with SDK integration and two uniform action buttons (Heading removed)
-
 import 'package:flutter/material.dart';
 import '../services/session_manager.dart';
-import '../models/user_model.dart';
 import 'profile_screen.dart';
 import 'downline_team_screen.dart';
 
@@ -11,68 +8,50 @@ class DashboardScreen extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final user = SessionManager().currentUser;
+    final currentUser = SessionManager().currentUser;
+    final firstName = currentUser?.firstName ?? 'User';
 
     return Scaffold(
       appBar: AppBar(
-        title: const Text('TeamBuild+ Dashboard'),
+        title: Text('Welcome $firstName!'),
+        automaticallyImplyLeading: true,
         actions: [
           IconButton(
-            icon: const Icon(Icons.person),
+            icon: const Icon(Icons.logout),
             onPressed: () {
-              Navigator.push(
-                context,
-                MaterialPageRoute(builder: (_) => const ProfileScreen()),
-              );
+              SessionManager().clearSession();
+              Navigator.popUntil(context, (route) => route.isFirst);
             },
-          )
+          ),
         ],
       ),
-      body: user == null
-          ? const Center(child: Text('No user session found.'))
-          : Padding(
-              padding: const EdgeInsets.all(16.0),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  ElevatedButton.icon(
-                    style: ElevatedButton.styleFrom(
-                      minimumSize: const Size.fromHeight(50),
-                      shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(8),
-                      ),
-                    ),
-                    icon: const Icon(Icons.person_outline),
-                    label: const Text('View Profile'),
-                    onPressed: () {
-                      Navigator.push(
-                        context,
-                        MaterialPageRoute(builder: (_) => const ProfileScreen()),
-                      );
-                    },
-                  ),
-                  const SizedBox(height: 12),
-                  ElevatedButton.icon(
-                    style: ElevatedButton.styleFrom(
-                      minimumSize: const Size.fromHeight(50),
-                      shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(8),
-                      ),
-                    ),
-                    icon: const Icon(Icons.group_outlined),
-                    label: const Text('View My Downline'),
-                    onPressed: () {
-                      Navigator.push(
-                        context,
-                        MaterialPageRoute(
-                          builder: (_) => DownlineTeamScreen(referredByUid: user.uid),
-                        ),
-                      );
-                    },
-                  ),
-                ],
+      body: Padding(
+        padding: const EdgeInsets.all(16.0),
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            Center(
+              child: ElevatedButton(
+                onPressed: () => Navigator.push(
+                  context,
+                  MaterialPageRoute(builder: (_) => const ProfileScreen()),
+                ),
+                child: const Text('View My Profile'),
               ),
             ),
+            const SizedBox(height: 16),
+            Center(
+              child: ElevatedButton(
+                onPressed: () => Navigator.push(
+                  context,
+                  MaterialPageRoute(builder: (_) => const DownlineTeamScreen()),
+                ),
+                child: const Text('View My Downline'),
+              ),
+            ),
+          ],
+        ),
+      ),
     );
   }
 }

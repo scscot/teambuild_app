@@ -1,13 +1,10 @@
-// PATCHED — user_model.dart with optional fullName support
-
 import 'package:cloud_firestore/cloud_firestore.dart';
 
 class UserModel {
   final String uid;
   final String email;
-  final String firstName;
-  final String lastName;
-  final String? fullName;
+  final String? firstName;
+  final String? lastName;
   final String? country;
   final String? state;
   final String? city;
@@ -19,9 +16,8 @@ class UserModel {
   UserModel({
     required this.uid,
     required this.email,
-    required this.firstName,
-    required this.lastName,
-    this.fullName,
+    this.firstName,
+    this.lastName,
     this.country,
     this.state,
     this.city,
@@ -31,22 +27,35 @@ class UserModel {
     this.createdAt,
   });
 
-  factory UserModel.fromMap(Map<String, dynamic> data) {
+  Map<String, dynamic> toMap() {
+    return {
+      'uid': uid,
+      'email': email,
+      'firstName': firstName,
+      'lastName': lastName,
+      'country': country,
+      'state': state,
+      'city': city,
+      'referralCode': referralCode,
+      'referredBy': referredBy,
+      'photoUrl': photoUrl,
+      'createdAt': createdAt?.toIso8601String(),
+    };
+  }
+
+  factory UserModel.fromMap(Map<String, dynamic> map) {
     return UserModel(
-      uid: data['uid'] ?? '',
-      email: data['email'] ?? '',
-      firstName: data['firstName'] ?? '',
-      lastName: data['lastName'] ?? '',
-      fullName: data['fullName'],
-      country: data['country'],
-      state: data['state'],
-      city: data['city'],
-      referralCode: data['referralCode'],
-      referredBy: data['referredBy'],
-      photoUrl: data['photoUrl'],
-      createdAt: data['createdAt'] != null
-          ? (data['createdAt'] as Timestamp).toDate()
-          : null,
+      uid: map['uid'] ?? '',
+      email: map['email'] ?? '',
+      firstName: map['firstName'],
+      lastName: map['lastName'],
+      country: map['country'],
+      state: map['state'],
+      city: map['city'],
+      referralCode: map['referralCode'],
+      referredBy: map['referredBy'],
+      photoUrl: map['photoUrl'],
+      createdAt: _parseTimestamp(map['createdAt']),
     );
   }
 
@@ -55,21 +64,11 @@ class UserModel {
     return UserModel.fromMap(data);
   }
 
-  Map<String, dynamic> toMap() {
-    return {
-      'uid': uid,
-      'email': email,
-      'firstName': firstName,
-      'lastName': lastName,
-      'fullName': fullName,
-      'country': country,
-      'state': state,
-      'city': city,
-      'referralCode': referralCode,
-      'referredBy': referredBy,
-      'photoUrl': photoUrl,
-      'createdAt': createdAt != null ? Timestamp.fromDate(createdAt!) : null,
-    };
+  static DateTime? _parseTimestamp(dynamic value) {
+    if (value == null) return null;
+    if (value is Timestamp) return value.toDate();
+    if (value is String) return DateTime.tryParse(value);
+    return null;
   }
 
   UserModel copyWith({
@@ -77,7 +76,6 @@ class UserModel {
     String? email,
     String? firstName,
     String? lastName,
-    String? fullName,
     String? country,
     String? state,
     String? city,
@@ -91,7 +89,6 @@ class UserModel {
       email: email ?? this.email,
       firstName: firstName ?? this.firstName,
       lastName: lastName ?? this.lastName,
-      fullName: fullName ?? this.fullName,
       country: country ?? this.country,
       state: state ?? this.state,
       city: city ?? this.city,

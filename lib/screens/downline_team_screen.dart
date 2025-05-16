@@ -1,66 +1,73 @@
-// PATCHED — Fully restored from REST-based downline_team_screen.dart with SDK-based Firestore logic
-
 import 'package:flutter/material.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
 import '../models/user_model.dart';
 import '../services/firestore_service.dart';
+import '../services/session_manager.dart';
+import 'package:intl/intl.dart';
 
 class DownlineTeamScreen extends StatefulWidget {
-  final String referredByUid;
-
-  const DownlineTeamScreen({super.key, required this.referredByUid});
+  const DownlineTeamScreen({super.key});
 
   @override
   State<DownlineTeamScreen> createState() => _DownlineTeamScreenState();
 }
 
 class _DownlineTeamScreenState extends State<DownlineTeamScreen> {
-  late Future<List<UserModel>> _downlineUsersFuture;
+  List<UserModel> _downlineUsers = [];
+  bool _isLoading = true;
 
   @override
   void initState() {
     super.initState();
-    _downlineUsersFuture = FirestoreService().getDownlineUsers(widget.referredByUid);
+    _loadDownlineUsers();
+  }
+
+  Future<void> _loadDownlineUsers() async {
+    final currentUser = SessionManager().currentUser;
+    if (currentUser == null) return;
+
+    final referredByUid = currentUser.uid;
+    final users = await FirestoreService().getDownlineUsers(referredByUid);
+    setState(() {
+      _downlineUsers = users;
+      _isLoading = false;
+    });
   }
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: const Text('My Downline Team'),
+        title: const Text('My Downline'),
+        automaticallyImplyLeading: true,
       ),
-      body: FutureBuilder<List<UserModel>>(
-        future: _downlineUsersFuture,
-        builder: (context, snapshot) {
-          if (snapshot.connectionState == ConnectionState.waiting) {
-            return const Center(child: CircularProgressIndicator());
-          } else if (snapshot.hasError) {
-            return Center(child: Text('Error loading team: \${snapshot.error}'));
-          } else if (!snapshot.hasData || snapshot.data!.isEmpty) {
-            return const Center(child: Text('No downline team members found.'));
-          } else {
-            final users = snapshot.data!;
-            return ListView.separated(
-              itemCount: users.length,
-              separatorBuilder: (_, __) => const Divider(height: 1),
-              itemBuilder: (context, index) {
-                final user = users[index];
-                return ListTile(
-                  leading: const Icon(Icons.person_outline),
-                  title: Text('\${user.firstName} \${user.lastName}'),
-                  subtitle: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text('Email: \${user.email}'),
-                      if (user.createdAt != null)
-                        Text('Joined: \${user.createdAt!.toDate().toLocal().toString().split(".")[0]}'),
-                    ],
-                  ),
-                );
-              },
-            );
-          }
-        },
-      ),
+      body: _isLoading
+          ? const Center(child: CircularProgressIndicator())
+          : _downlineUsers.isEmpty
+              ? const Center(child: Text('No team members found.'))
+              : ListView.builder(
+                  itemCount: _downlineUsers.length,
+                  itemBuilder: (context, index) {
+                    final user = _downlineUsers[index];
+                    final fullName = '${user.firstName} ${user.lastName}';
+                    final joinDate = user.createdAt != null
+                        ? DateFormat.yMMMMd().format(user.createdAt!)
+                        : 'N/A';
+                    return Card(
+                      margin: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                      child: ListTile(
+                        title: Text(fullName),
+                        subtitle: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text(user.email),
+                            Text('Joined: $joinDate'),
+                          ],
+                        ),
+                      ),
+                    );
+                  },
+                ),
     );
   }
 }
