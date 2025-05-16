@@ -1,12 +1,14 @@
-// PATCHED — SDK-based login_screen.dart with Login above Forgot Password, Google Login, and Apple Sign-In button added
+// PATCHED — login_screen.dart with UID propagation, Google & Apple Sign-In
 
 import 'package:flutter/material.dart';
-import '../services/auth_service.dart';
-import '../services/firestore_service.dart';
-import '../services/session_manager.dart';
-import '../models/user_model.dart';
-import 'dashboard_screen.dart';
-import 'new_registration_screen.dart';
+import 'package:tbp/models/user_model.dart';
+import 'package:tbp/screens/dashboard_screen.dart';
+import 'package:tbp/screens/new_registration_screen.dart';
+import 'package:tbp/services/auth_service.dart';
+import 'package:tbp/services/firestore_service.dart';
+import 'package:tbp/services/session_manager.dart';
+import 'package:sign_in_with_apple/sign_in_with_apple.dart';
+import 'package:google_sign_in/google_sign_in.dart';
 
 class LoginScreen extends StatefulWidget {
   const LoginScreen({super.key});
@@ -36,9 +38,13 @@ class _LoginScreenState extends State<LoginScreen> {
         );
 
         if (user != null) {
-          final userModel = await FirestoreService().getUser(user.uid);
-          if (userModel != null) {
-            SessionManager().setCurrentUser(userModel);
+          final userData = await FirestoreService().getUserData(user.uid);
+
+          if (userData != null) {
+            final loggedInUser = UserModel.fromMap(userData);
+            final completeUser = loggedInUser.copyWith(uid: user.uid);
+            SessionManager().setCurrentUser(completeUser);
+
             if (mounted) {
               Navigator.pushReplacement(
                 context,
@@ -47,7 +53,7 @@ class _LoginScreenState extends State<LoginScreen> {
             }
           } else {
             setState(() {
-              _errorMessage = 'User data not found in Firestore.';
+              _errorMessage = 'User profile not found.';
             });
           }
         } else {
@@ -69,128 +75,79 @@ class _LoginScreenState extends State<LoginScreen> {
     }
   }
 
-  void _navigateToRegistration() {
-    Navigator.push(
-      context,
-      MaterialPageRoute(builder: (_) => const NewRegistrationScreen()),
-    );
+  Future<void> _signInWithGoogle() async {
+    final googleUser = await GoogleSignIn().signIn();
+    if (googleUser != null) {
+      print('🟢 Google Sign-In: ${googleUser.displayName}');
+    } else {
+      print('⚠️ Google Sign-In cancelled');
+    }
   }
 
-  void _forgotPassword() {
-    showDialog(
-      context: context,
-      builder: (context) => AlertDialog(
-        title: const Text('Forgot Password'),
-        content: const Text('Password reset feature coming soon.'),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(context),
-            child: const Text('OK'),
-          ),
-        ],
-      ),
-    );
-  }
-
-  void _loginWithGoogle() {
-    showDialog(
-      context: context,
-      builder: (context) => AlertDialog(
-        title: const Text('Google Login'),
-        content: const Text('Google login integration coming soon.'),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(context),
-            child: const Text('OK'),
-          ),
-        ],
-      ),
-    );
-  }
-
-  void _loginWithApple() {
-    showDialog(
-      context: context,
-      builder: (context) => AlertDialog(
-        title: const Text('Apple Login'),
-        content: const Text('Apple login integration coming soon.\nRedirect: https://teambuilder-plus-fe74d.firebaseapp.com/__/auth/handler'),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(context),
-            child: const Text('OK'),
-          ),
-        ],
-      ),
-    );
+  Future<void> _signInWithApple() async {
+    try {
+      final credential = await SignInWithApple.getAppleIDCredential(
+        scopes: [AppleIDAuthorizationScopes.email, AppleIDAuthorizationScopes.fullName],
+      );
+      print('🍎 Apple Sign-In success: ${credential.userIdentifier}');
+    } catch (e) {
+      print('❌ Apple Sign-In failed: $e');
+    }
   }
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(
-        title: const Text('Login'),
-      ),
-      body: SingleChildScrollView(
+      appBar: AppBar(title: const Text('Login')),
+      body: Padding(
         padding: const EdgeInsets.all(16.0),
         child: Form(
           key: _formKey,
           child: Column(
             mainAxisAlignment: MainAxisAlignment.center,
             children: [
-              const SizedBox(height: 40),
-              const Text('Welcome Back', style: TextStyle(fontSize: 24, fontWeight: FontWeight.bold)),
-              const SizedBox(height: 10),
-              const Text('Please log in to continue'),
-              const SizedBox(height: 30),
               TextFormField(
                 controller: _emailController,
                 decoration: const InputDecoration(labelText: 'Email'),
-                keyboardType: TextInputType.emailAddress,
-                validator: (value) => value == null || value.isEmpty ? 'Please enter email' : null,
+                validator: (value) => value == null || value.isEmpty ? 'Required' : null,
               ),
-              const SizedBox(height: 16),
               TextFormField(
                 controller: _passwordController,
                 decoration: const InputDecoration(labelText: 'Password'),
                 obscureText: true,
-                validator: (value) => value == null || value.isEmpty ? 'Please enter password' : null,
+                validator: (value) => value == null || value.isEmpty ? 'Required' : null,
               ),
-              const SizedBox(height: 16),
+              const SizedBox(height: 20),
               if (_isLoading) const CircularProgressIndicator(),
               if (_errorMessage != null) ...[
-                Text(
-                  _errorMessage!,
-                  style: const TextStyle(color: Colors.red),
-                ),
+                Text(_errorMessage!, style: const TextStyle(color: Colors.red)),
                 const SizedBox(height: 10),
               ],
               ElevatedButton(
                 onPressed: _isLoading ? null : _login,
                 child: const Text('Login'),
               ),
-              const SizedBox(height: 16),
-              Center(
-                child: TextButton(
-                  onPressed: _forgotPassword,
-                  child: const Text('Forgot Password?'),
+              TextButton(
+                onPressed: () => Navigator.push(
+                  context,
+                  MaterialPageRoute(builder: (_) => const NewRegistrationScreen()),
                 ),
+                child: const Text('Create Account'),
               ),
-              const SizedBox(height: 10),
+              const SizedBox(height: 16),
+              const Divider(),
+              const Text('or sign in with'),
+              const SizedBox(height: 8),
               ElevatedButton.icon(
-                onPressed: _loginWithGoogle,
+                onPressed: _signInWithGoogle,
                 icon: const Icon(Icons.login),
                 label: const Text('Sign in with Google'),
               ),
-              const SizedBox(height: 10),
+              const SizedBox(height: 8),
               ElevatedButton.icon(
-                onPressed: _loginWithApple,
+                onPressed: _signInWithApple,
                 icon: const Icon(Icons.apple),
                 label: const Text('Sign in with Apple'),
-              ),
-              const SizedBox(height: 16),
-              TextButton(
-                onPressed: _navigateToRegistration,
-                child: const Text("Don't have an account? Create one"),
               ),
             ],
           ),

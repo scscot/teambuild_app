@@ -1,6 +1,7 @@
-// PATCHED — profile_screen.dart updated to prefer fullName and reflect sponsor fallback name
+// FULLY RESTORED + PATCHED — profile_screen.dart with UI layout + sponsor first/last name logic (fixed FirebaseFirestore import)
 
 import 'package:flutter/material.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
 import '../services/session_manager.dart';
 import '../models/user_model.dart';
 import '../services/firestore_service.dart';
@@ -27,18 +28,26 @@ class _ProfileScreenState extends State<ProfileScreen> {
   Future<void> _loadUserData() async {
     final currentUser = SessionManager().currentUser;
     if (currentUser != null) {
-      print('✅ Current user loaded: ${currentUser.fullName ?? currentUser.firstName + " " + currentUser.lastName}');
+      print('✅ Current user loaded: ${currentUser.firstName} ${currentUser.lastName}');
       setState(() {
         _user = currentUser;
       });
       if (currentUser.referredBy != null && currentUser.referredBy!.isNotEmpty) {
         print('🔎 Looking up sponsor name for UID: ${currentUser.referredBy}');
-        final sponsorName = await FirestoreService().getUserFullName(currentUser.referredBy!);
-        if (mounted) {
-          print('✅ Sponsor name resolved: $sponsorName');
-          setState(() {
-            _sponsorName = sponsorName;
-          });
+        final doc = await FirebaseFirestore.instance.collection('users').doc(currentUser.referredBy).get();
+        final data = doc.data();
+        if (data != null) {
+          final first = data['firstName'] ?? '';
+          final last = data['lastName'] ?? '';
+          final name = '$first $last'.trim();
+          if (mounted) {
+            print('✅ Sponsor name resolved: $name');
+            setState(() {
+              _sponsorName = name.isEmpty ? null : name;
+            });
+          }
+        } else {
+          print('⚠️ Sponsor user doc not found');
         }
       } else {
         print('ℹ️ No referredBy code found for this user');
@@ -99,14 +108,17 @@ class _ProfileScreenState extends State<ProfileScreen> {
                     ),
                   ),
                   const SizedBox(height: 20),
-                  _buildInfoRow('Name', _user!.fullName ?? '${_user!.firstName} ${_user!.lastName}'),
+                  _buildInfoRow('Name', '${_user!.firstName} ${_user!.lastName}'),
                   _buildInfoRow('Email', _user!.email),
                   _buildInfoRow('City', _user!.city ?? 'N/A'),
                   _buildInfoRow('State/Province', _user!.state ?? 'N/A'),
                   _buildInfoRow('Country', _user!.country ?? 'N/A'),
-                  _buildInfoRow('Join Date', _user!.createdAt != null
-                      ? DateFormat.yMMMMd().format(_user!.createdAt!)
-                      : 'N/A'),
+                  _buildInfoRow(
+                    'Join Date',
+                    _user!.createdAt != null
+                        ? DateFormat.yMMMMd().format(_user!.createdAt!)
+                        : 'N/A',
+                  ),
                   if (_sponsorName != null && _sponsorName!.isNotEmpty)
                     _buildInfoRow('Sponsor Name', _sponsorName!),
                   const SizedBox(height: 30),

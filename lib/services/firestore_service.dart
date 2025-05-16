@@ -1,4 +1,4 @@
-// PATCHED — firestore_service.dart with updateUser() method
+// PATCHED — firestore_service.dart with uid validation and diagnostics for updateUser
 
 import 'package:cloud_firestore/cloud_firestore.dart';
 import '../models/user_model.dart';
@@ -28,6 +28,12 @@ class FirestoreService {
   }
 
   Future<void> updateUser(String uid, Map<String, dynamic> updates) async {
+    if (uid.isEmpty) {
+      print('❌ FirestoreService.updateUser — UID is empty. Cannot update user.');
+      throw ArgumentError('User ID cannot be empty');
+    }
+    print('📡 FirestoreService.updateUser — Updating UID: $uid');
+    print('📦 Update Payload: $updates');
     await _firestore.collection('users').doc(uid).update(updates);
   }
 
