@@ -32,11 +32,8 @@ class _DashboardScreenState extends State<DashboardScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
+      // PATCH START: removed leading IconButton (back arrow) from AppBar
       appBar: AppBar(
-        leading: IconButton(
-          icon: const Icon(Icons.arrow_back),
-          onPressed: () => Navigator.of(context).maybePop(),
-        ),
         title: const Text('Dashboard'),
         actions: [
           IconButton(
@@ -48,6 +45,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
           ),
         ],
       ),
+      // PATCH END
       body: _user == null
           ? const Center(child: CircularProgressIndicator())
           : Column(
