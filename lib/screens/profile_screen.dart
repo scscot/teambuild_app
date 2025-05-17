@@ -1,10 +1,11 @@
-// CLEAN PATCHED — profile_screen.dart with upload spinner modal feedback
+// CLEAN PATCHED — profile_screen.dart with biometric availability check and improved toggle label
 
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:firebase_storage/firebase_storage.dart';
 import 'package:firebase_auth/firebase_auth.dart';
+import 'package:local_auth/local_auth.dart';
 import 'dart:io';
 import '../services/session_manager.dart';
 import '../models/user_model.dart';
@@ -22,6 +23,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
   UserModel? _user;
   String? _sponsorName;
   bool _biometricEnabled = false;
+  bool _biometricsAvailable = false;
   final ImagePicker _picker = ImagePicker();
 
   @override
@@ -29,6 +31,16 @@ class _ProfileScreenState extends State<ProfileScreen> {
     super.initState();
     _loadUserData();
     _loadBiometricSetting();
+    _checkBiometricSupport();
+  }
+
+  Future<void> _checkBiometricSupport() async {
+    final auth = LocalAuthentication();
+    final available = await auth.canCheckBiometrics;
+    final supported = await auth.isDeviceSupported();
+    setState(() {
+      _biometricsAvailable = available && supported;
+    });
   }
 
   Future<void> _loadUserData() async {
@@ -89,7 +101,6 @@ class _ProfileScreenState extends State<ProfileScreen> {
             return;
           }
 
-          // PATCH START: show loading spinner
           showDialog(
             context: context,
             barrierDismissible: false,
@@ -113,8 +124,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
         } catch (e) {
           print('❌ Error uploading image: $e');
         } finally {
-          Navigator.of(context).pop(); // dismiss spinner
-          // PATCH END
+          Navigator.of(context).pop();
         }
       }
     }
@@ -220,11 +230,12 @@ class _ProfileScreenState extends State<ProfileScreen> {
                     ),
                   ),
                   const SizedBox(height: 20),
-                  SwitchListTile(
-                    title: const Text('Enable Biometric Login'),
-                    value: _biometricEnabled,
-                    onChanged: _toggleBiometric,
-                  )
+                  if (_biometricsAvailable)
+                    SwitchListTile(
+                      title: const Text('Enable Face ID / Touch ID'),
+                      value: _biometricEnabled,
+                      onChanged: _toggleBiometric,
+                    ),
                 ],
               ),
             ),
