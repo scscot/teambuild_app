@@ -1,8 +1,9 @@
-// CLEAN PATCHED — dashboard_screen.dart with corrected DownlineTeamScreen parameter
+// CLEAN PATCHED — dashboard_screen.dart with working logout logic and removed back icon
 
 import 'package:flutter/material.dart';
 import 'package:tbp/screens/downline_team_screen.dart';
 import 'package:tbp/screens/profile_screen.dart';
+import 'package:tbp/screens/login_screen.dart';
 import '../services/session_manager.dart';
 import '../models/user_model.dart';
 
@@ -32,7 +33,6 @@ class _DashboardScreenState extends State<DashboardScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      // PATCH START: removed leading IconButton (back arrow) from AppBar
       appBar: AppBar(
         title: const Text('Dashboard'),
         actions: [
@@ -40,12 +40,16 @@ class _DashboardScreenState extends State<DashboardScreen> {
             icon: const Icon(Icons.logout),
             onPressed: () async {
               await SessionManager().clearSession();
-              if (mounted) Navigator.of(context).popUntil((route) => route.isFirst);
+              if (mounted) {
+                Navigator.of(context).pushAndRemoveUntil(
+                  MaterialPageRoute(builder: (_) => const LoginScreen()),
+                  (route) => false,
+                );
+              }
             },
           ),
         ],
       ),
-      // PATCH END
       body: _user == null
           ? const Center(child: CircularProgressIndicator())
           : Column(
@@ -89,4 +93,4 @@ class _DashboardScreenState extends State<DashboardScreen> {
             ),
     );
   }
-}
+}    
