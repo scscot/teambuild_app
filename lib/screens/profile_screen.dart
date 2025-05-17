@@ -1,4 +1,4 @@
-// CLEAN PATCHED — profile_screen.dart with void callback compatibility for image upload
+// CLEAN PATCHED — profile_screen.dart with upload spinner modal feedback
 
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
@@ -22,7 +22,6 @@ class _ProfileScreenState extends State<ProfileScreen> {
   UserModel? _user;
   String? _sponsorName;
   bool _biometricEnabled = false;
-
   final ImagePicker _picker = ImagePicker();
 
   @override
@@ -90,6 +89,13 @@ class _ProfileScreenState extends State<ProfileScreen> {
             return;
           }
 
+          // PATCH START: show loading spinner
+          showDialog(
+            context: context,
+            barrierDismissible: false,
+            builder: (_) => const Center(child: CircularProgressIndicator()),
+          );
+
           final storageRef = FirebaseStorage.instance
               .ref()
               .child('profile_photos/${authUser.uid}/profile.jpg');
@@ -106,6 +112,9 @@ class _ProfileScreenState extends State<ProfileScreen> {
           print('✅ Image uploaded and profile updated successfully');
         } catch (e) {
           print('❌ Error uploading image: $e');
+        } finally {
+          Navigator.of(context).pop(); // dismiss spinner
+          // PATCH END
         }
       }
     }
