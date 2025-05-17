@@ -40,6 +40,8 @@ flutter_*.png
 # iOS related
 ios/Flutter/Generated.xcconfig
 ios/Flutter/flutter_export_environment.sh
+ios/Flutter/Generated*.xcconfig
+ios/Flutter/flutter_export_environment*.sh
 ios/Pods/
 ios/Podfile.lock
 ios/.symlinks/
@@ -47,6 +49,9 @@ ios/Runner.xcworkspace/
 ios/.generated/
 ios/.idea/
 ios/.DS_Store
+ios/Runner/*.ipa
+ios/Runner/Runner*.plist
+ios/Runner/Runner.entitlements
 ios_backup*/
 
 # Xcode & macOS
@@ -74,3 +79,4 @@ DerivedData/
 # Build config exports
 mybuildsettings_snapshot.txt
 tbp_files.zip
+DartFiles.zip
