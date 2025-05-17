@@ -1,15 +1,14 @@
-// CLEAN PATCHED — auth_service.dart with FirebaseAuth login and register logic
+// CLEAN PATCHED — auth_service.dart with login method returning UserModel
 
-import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
 import '../models/user_model.dart';
-import 'session_manager.dart';
+import 'firestore_service.dart';
 
 class AuthService {
   final FirebaseAuth _auth = FirebaseAuth.instance;
-  final FirebaseFirestore _firestore = FirebaseFirestore.instance;
 
-  Future<bool> login(String email, String password) async {
+  Future<UserModel> login(String email, String password) async {
     try {
       final userCredential = await _auth.signInWithEmailAndPassword(
         email: email,
@@ -17,21 +16,19 @@ class AuthService {
       );
 
       final uid = userCredential.user?.uid;
-      if (uid == null) return false;
+      if (uid == null) throw Exception('User ID not found after login');
 
-      final doc = await _firestore.collection('users').doc(uid).get();
-      if (!doc.exists) return false;
+      final user = await FirestoreService().getUser(uid);
+      if (user == null) throw Exception('User profile not found in Firestore');
 
-      final user = UserModel.fromFirestore(doc);
-      await SessionManager().saveUser(user);
-      return true;
+      return user;
     } catch (e) {
-      print('❌ Login error: \$e');
-      return false;
+      print('❌ AuthService.login error: $e');
+      rethrow;
     }
   }
 
-  Future<bool> register(String email, String password) async {
+  Future<UserModel> register(String email, String password, Map<String, dynamic> userMap) async {
     try {
       final userCredential = await _auth.createUserWithEmailAndPassword(
         email: email,
@@ -39,33 +36,18 @@ class AuthService {
       );
 
       final uid = userCredential.user?.uid;
-      if (uid == null) return false;
+      if (uid == null) throw Exception('User ID not found after registration');
 
-      final user = UserModel(
-        uid: uid,
-        email: email,
-        firstName: '',
-        lastName: '',
-        city: '',
-        state: '',
-        country: '',
-        referralCode: '',
-        referredBy: '',
-        photoUrl: '',
-        createdAt: DateTime.now(),
-      );
+      userMap['uid'] = uid;
+      await FirestoreService().createUser(userMap);
 
-      await _firestore.collection('users').doc(uid).set(user.toMap());
-      await SessionManager().saveUser(user);
-      return true;
+      final user = await FirestoreService().getUser(uid);
+      if (user == null) throw Exception('User profile not found after registration');
+
+      return user;
     } catch (e) {
-      print('❌ Registration error: \$e');
-      return false;
+      print('❌ AuthService.register error: $e');
+      rethrow;
     }
   }
-
-  Future<void> logout() async {
-    await _auth.signOut();
-    await SessionManager().clearSession();
-  }
-}    
+}
