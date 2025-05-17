@@ -1,4 +1,4 @@
-// CLEAN PATCHED — edit_profile_screen.dart using async currentUser getter
+// CLEAN PATCHED — edit_profile_screen.dart with null-safe assignments for all fields
 
 import 'package:flutter/material.dart';
 import '../models/user_model.dart';
@@ -33,11 +33,11 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
     if (currentUser != null) {
       print('🧠 EditProfileScreen — currentUser: ${currentUser.firstName}');
       setState(() {
-        _firstNameController.text = currentUser.firstName;
-        _lastNameController.text = currentUser.lastName;
-        _cityController.text = currentUser.city;
-        _selectedCountry = currentUser.country;
-        _selectedState = currentUser.state;
+        _firstNameController.text = currentUser.firstName ?? '';
+        _lastNameController.text = currentUser.lastName ?? '';
+        _cityController.text = currentUser.city ?? '';
+        _selectedCountry = currentUser.country ?? 'United States';
+        _selectedState = currentUser.state ?? '';
       });
     }
   }

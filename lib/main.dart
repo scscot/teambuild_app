@@ -1,13 +1,15 @@
-// PATCHED — main.dart with conditional Dashboard vs Login based on stored session
+// PATCHED — main.dart fully synced with Firebase.initializeApp and session-based routing
 
 import 'package:flutter/material.dart';
+import 'package:firebase_core/firebase_core.dart'; // ✅ Required
 import 'screens/login_screen.dart';
 import 'screens/dashboard_screen.dart';
 import 'services/session_manager.dart';
 import 'models/user_model.dart';
 
-void main() {
+void main() async {
   WidgetsFlutterBinding.ensureInitialized();
+  await Firebase.initializeApp(); // ✅ Initialize Firebase SDK
   runApp(const MyApp());
 }
 
