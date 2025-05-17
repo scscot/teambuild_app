@@ -1,9 +1,10 @@
-// PATCHED — profile_screen.dart with fixed label rendering and name display
+// CLEAN PATCHED — profile_screen.dart with void callback compatibility for image upload
 
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:firebase_storage/firebase_storage.dart';
+import 'package:firebase_auth/firebase_auth.dart';
 import 'dart:io';
 import '../services/session_manager.dart';
 import '../models/user_model.dart';
@@ -22,6 +23,8 @@ class _ProfileScreenState extends State<ProfileScreen> {
   String? _sponsorName;
   bool _biometricEnabled = false;
 
+  final ImagePicker _picker = ImagePicker();
+
   @override
   void initState() {
     super.initState();
@@ -33,31 +36,26 @@ class _ProfileScreenState extends State<ProfileScreen> {
     final currentUser = await SessionManager().getCurrentUser();
     if (currentUser != null) {
       print('✅ Current user loaded: ${currentUser.firstName} ${currentUser.lastName}');
-      setState(() {
-        _user = currentUser;
-      });
+      setState(() => _user = currentUser);
+
       if (currentUser.referredBy != null && currentUser.referredBy!.isNotEmpty) {
         print('🔎 Looking up sponsor name by referralCode: ${currentUser.referredBy}');
         try {
           final sponsorName = await FirestoreService().getSponsorNameByReferralCode(currentUser.referredBy!);
           if (mounted) {
             print('✅ Sponsor name resolved: $sponsorName');
-            setState(() {
-              _sponsorName = sponsorName;
-            });
+            setState(() => _sponsorName = sponsorName);
           }
         } catch (e) {
           print('❌ Failed to load sponsor data: $e');
         }
-      } else {
-        print('ℹ️ No referredBy code found for this user');
       }
-    } else {
-      print('❌ No current user found in SessionManager');
     }
   }
 
-  final ImagePicker _picker = ImagePicker();
+  void _showImageSourceActionSheetWrapper() {
+    _showImageSourceActionSheet(context);
+  }
 
   Future<void> _showImageSourceActionSheet(BuildContext context) async {
     final source = await showModalBottomSheet<ImageSource>(
@@ -83,22 +81,27 @@ class _ProfileScreenState extends State<ProfileScreen> {
     if (source != null) {
       final pickedFile = await _picker.pickImage(source: source);
       if (pickedFile != null) {
-        File imageFile = File(pickedFile.path);
+        final file = File(pickedFile.path);
+
         try {
+          final authUser = FirebaseAuth.instance.currentUser;
+          if (authUser == null) {
+            print('❌ No FirebaseAuth user found. Cannot upload image.');
+            return;
+          }
+
           final storageRef = FirebaseStorage.instance
               .ref()
-              .child('user_profile_photos/${_user!.uid}.jpg');
+              .child('profile_photos/${authUser.uid}/profile.jpg');
 
-          await storageRef.putFile(imageFile);
-          final downloadUrl = await storageRef.getDownloadURL();
+          await storageRef.putFile(file);
+          final imageUrl = await storageRef.getDownloadURL();
 
-          await FirestoreService().updateUserField(_user!.uid, 'photoUrl', downloadUrl);
+          await FirestoreService().updateUserField(authUser.uid, 'photoUrl', imageUrl);
 
-          final updatedUser = _user!.copyWith(photoUrl: downloadUrl);
+          final updatedUser = _user!.copyWith(photoUrl: imageUrl);
           await SessionManager().saveUser(updatedUser);
-          setState(() {
-            _user = updatedUser;
-          });
+          setState(() => _user = updatedUser);
 
           print('✅ Image uploaded and profile updated successfully');
         } catch (e) {
@@ -110,9 +113,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
 
   Future<void> _loadBiometricSetting() async {
     final enabled = await SessionManager().getBiometricEnabled();
-    setState(() {
-      _biometricEnabled = enabled;
-    });
+    setState(() => _biometricEnabled = enabled);
   }
 
   Future<void> _toggleBiometric(bool value) async {
@@ -120,45 +121,11 @@ class _ProfileScreenState extends State<ProfileScreen> {
     await SessionManager().setBiometricEnabled(value);
   }
 
-  Future<void> _pickImage() async {
-    if (_user == null) return;
-    final picker = ImagePicker();
-    final pickedFile = await picker.pickImage(
-      source: ImageSource.gallery,
-      imageQuality: 75,
-    );
-
-    if (pickedFile != null) {
-      final file = File(pickedFile.path);
-      final storageRef = FirebaseStorage.instance
-          .ref()
-          .child('profile_images/${_user!.uid}/profile_${DateTime.now().millisecondsSinceEpoch}.jpg');
-
-      final uploadTask = await storageRef.putFile(file);
-      final imageUrl = await uploadTask.ref.getDownloadURL();
-
-      await FirestoreService().updateUser(_user!.uid, {'photoUrl': imageUrl});
-
-      final updatedUser = _user!.copyWith(photoUrl: imageUrl);
-      await SessionManager().setCurrentUser(updatedUser);
-
-      if (mounted) {
-        setState(() {
-          _user = updatedUser;
-        });
-      }
-    }
-  }
-
   void _navigateToEditProfile() {
-    print('✏️ Navigating to EditProfileScreen...');
     Navigator.push(
       context,
       MaterialPageRoute(builder: (_) => const EditProfileScreen()),
-    ).then((_) {
-      print('🔁 Returned from EditProfileScreen. Refreshing profile data.');
-      _loadUserData();
-    });
+    ).then((_) => _loadUserData());
   }
 
   @override
@@ -172,7 +139,9 @@ class _ProfileScreenState extends State<ProfileScreen> {
             icon: const Icon(Icons.logout),
             onPressed: () async {
               await SessionManager().clearSession();
-              if (mounted) Navigator.of(context).popUntil((route) => route.isFirst);
+              if (mounted) {
+                Navigator.of(context).popUntil((route) => route.isFirst);
+              }
             },
           )
         ],
@@ -186,21 +155,18 @@ class _ProfileScreenState extends State<ProfileScreen> {
                 children: [
                   Center(
                     child: GestureDetector(
-                      onTap: _pickImage,
+                      onTap: _showImageSourceActionSheetWrapper,
                       child: Stack(
                         alignment: Alignment.bottomRight,
                         children: [
-                          GestureDetector(
-                            onTap: () => _showImageSourceActionSheet(context),
-                            child: CircleAvatar(
-                              radius: 50,
-                              backgroundImage: _user!.photoUrl != null && _user!.photoUrl!.isNotEmpty
-                                  ? NetworkImage(_user!.photoUrl!)
-                                  : const AssetImage('assets/images/default_avatar.png') as ImageProvider,
-                            ),
+                          CircleAvatar(
+                            radius: 50,
+                            backgroundImage: _user!.photoUrl != null && _user!.photoUrl!.isNotEmpty
+                                ? NetworkImage(_user!.photoUrl!)
+                                : const AssetImage('assets/images/default_avatar.png') as ImageProvider,
                           ),
                           GestureDetector(
-                            onTap: () => _showImageSourceActionSheet(context),
+                            onTap: _showImageSourceActionSheetWrapper,
                             child: Container(
                               decoration: BoxDecoration(
                                 shape: BoxShape.circle,

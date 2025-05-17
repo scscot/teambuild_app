@@ -22,28 +22,39 @@ class _LoginScreenState extends State<LoginScreen> {
   Future<void> _login() async {
     setState(() => _isLoading = true);
     try {
-      final user = await AuthService().signInWithEmailAndPassword(
+      // PATCH START: Replace old signInWithEmailAndPassword with new login method
+      final success = await AuthService().login(
         _emailController.text.trim(),
         _passwordController.text.trim(),
       );
+      if (!success) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Login failed. Please try again.')),
+        );
+        setState(() => _isLoading = false);
+        return;
+      }
+      // PATCH END
+
+      final user = await SessionManager().getCurrentUser();
       if (user != null) {
-        final userData = await FirestoreService().getUserData(user.uid);
-        if (userData != null) {
-          final currentUser = UserModel.fromMap(userData).copyWith(uid: user.uid);
-          await SessionManager().setCurrentUser(currentUser);
-          if (mounted) {
-            Navigator.pushReplacement(
-              context,
-              MaterialPageRoute(builder: (_) => const DashboardScreen()),
-            );
-          }
-        }
+        Navigator.pushReplacement(
+          context,
+          MaterialPageRoute(builder: (_) => const DashboardScreen()),
+        );
       }
     } catch (e) {
-      setState(() => _error = e.toString());
+      setState(() => _error = 'Login failed: $e');
     } finally {
       setState(() => _isLoading = false);
     }
+  }
+
+  @override
+  void dispose() {
+    _emailController.dispose();
+    _passwordController.dispose();
+    super.dispose();
   }
 
   @override
@@ -57,29 +68,40 @@ class _LoginScreenState extends State<LoginScreen> {
           children: [
             TextField(
               controller: _emailController,
+              keyboardType: TextInputType.emailAddress,
               decoration: const InputDecoration(labelText: 'Email'),
             ),
+            const SizedBox(height: 16.0),
             TextField(
               controller: _passwordController,
               obscureText: true,
               decoration: const InputDecoration(labelText: 'Password'),
             ),
-            const SizedBox(height: 20),
-            ElevatedButton(
-              onPressed: _isLoading ? null : _login,
-              child: _isLoading ? const CircularProgressIndicator() : const Text('Login'),
-            ),
-            TextButton(
-              onPressed: () => Navigator.push(
-                context,
-                MaterialPageRoute(builder: (_) => const NewRegistrationScreen()),
+            const SizedBox(height: 16.0),
+            if (_isLoading) const CircularProgressIndicator(),
+            if (!_isLoading)
+              ElevatedButton(
+                onPressed: _login,
+                child: const Text('Login'),
               ),
-              child: const Text('Create Account'),
+            const SizedBox(height: 8.0),
+            TextButton(
+              onPressed: () {
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(builder: (_) => const NewRegistrationScreen()),
+                );
+              },
+              child: const Text('Create an Account'),
             ),
-            if (_error != null) ...[
-              const SizedBox(height: 24),
-              Text(_error!, style: const TextStyle(color: Colors.red)),
-            ]
+            if (_error != null)
+              Padding(
+                padding: const EdgeInsets.only(top: 12.0),
+                child: Text(
+                  _error!,
+                  style: const TextStyle(color: Colors.red),
+                ),
+              ),
           ],
         ),
       ),

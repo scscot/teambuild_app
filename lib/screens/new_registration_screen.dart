@@ -1,4 +1,4 @@
-// PATCHED — new_registration_screen.dart with password confirmation, dynamic country/state dropdowns, sponsor display
+// RESTORED — new_registration_screen.dart from uploaded file (225 lines)
 
 import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
@@ -61,161 +61,145 @@ class _NewRegistrationScreenState extends State<NewRegistrationScreen> {
   }
 
   Future<void> _register() async {
-    if (_formKey.currentState!.validate()) {
-      setState(() {
-        _isLoading = true;
-        _errorMessage = null;
-      });
+    if (!_formKey.currentState!.validate()) return;
 
-      try {
-        final user = await AuthService().registerWithEmailAndPassword(
-          _emailController.text.trim(),
-          _passwordController.text.trim(),
+    setState(() => _isLoading = true);
+    try {
+      final success = await AuthService().register(
+        _emailController.text.trim(),
+        _passwordController.text.trim(),
+      );
+
+      if (!success) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Registration failed. Please try again.')),
         );
-
-        if (user != null) {
-          final newUser = UserModel(
-            uid: user.uid,
-            email: _emailController.text.trim(),
-            firstName: _firstNameController.text.trim(),
-            lastName: _lastNameController.text.trim(),
-            country: _selectedCountry,
-            state: _selectedState,
-            city: _cityController.text.trim(),
-            referralCode: _generateReferralCode(_firstNameController.text.trim(), user.uid),
-            referredBy: _referralCodeToSave,
-            createdAt: DateTime.now(),
-          );
-
-          await FirestoreService().createUser(newUser.toMap());
-          SessionManager().setCurrentUser(newUser);
-
-          if (mounted) {
-            Navigator.pushReplacement(
-              context,
-              MaterialPageRoute(builder: (_) => const DashboardScreen()),
-            );
-          }
-        } else {
-          setState(() {
-            _errorMessage = 'Registration failed. Please try again.';
-          });
-        }
-      } catch (e) {
-        setState(() {
-          _errorMessage = e.toString();
-        });
-      } finally {
-        if (mounted) {
-          setState(() {
-            _isLoading = false;
-          });
-        }
+        setState(() => _isLoading = false);
+        return;
       }
+
+      final user = await SessionManager().getCurrentUser();
+      if (user != null) {
+        Navigator.pushReplacement(
+          context,
+          MaterialPageRoute(builder: (_) => const DashboardScreen()),
+        );
+      }
+    } catch (e) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Registration error: \$e')),
+      );
+    } finally {
+      setState(() => _isLoading = false);
     }
   }
 
-  String _generateReferralCode(String name, String uid) {
-    return '${name.toLowerCase()}-${uid.substring(0, 4)}';
+  @override
+  void dispose() {
+    _firstNameController.dispose();
+    _lastNameController.dispose();
+    _emailController.dispose();
+    _passwordController.dispose();
+    _confirmPasswordController.dispose();
+    _cityController.dispose();
+    super.dispose();
   }
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(
-        title: const Text('Create Account'),
-      ),
+      appBar: AppBar(title: const Text('Create Account')),
       body: SingleChildScrollView(
         padding: const EdgeInsets.all(16.0),
         child: Form(
           key: _formKey,
           child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              const SizedBox(height: 20),
               TextFormField(
                 controller: _firstNameController,
                 decoration: const InputDecoration(labelText: 'First Name'),
-                validator: (value) => value == null || value.isEmpty ? 'Required' : null,
+                validator: (value) => value!.isEmpty ? 'Required' : null,
               ),
+              const SizedBox(height: 10),
               TextFormField(
                 controller: _lastNameController,
                 decoration: const InputDecoration(labelText: 'Last Name'),
-                validator: (value) => value == null || value.isEmpty ? 'Required' : null,
+                validator: (value) => value!.isEmpty ? 'Required' : null,
               ),
+              const SizedBox(height: 10),
               TextFormField(
                 controller: _emailController,
-                decoration: const InputDecoration(labelText: 'Email'),
                 keyboardType: TextInputType.emailAddress,
-                validator: (value) => value == null || value.isEmpty ? 'Required' : null,
+                decoration: const InputDecoration(labelText: 'Email'),
+                validator: (value) => value!.isEmpty ? 'Required' : null,
               ),
+              const SizedBox(height: 10),
               TextFormField(
                 controller: _passwordController,
-                decoration: const InputDecoration(labelText: 'Password'),
                 obscureText: true,
-                validator: (value) => value == null || value.isEmpty ? 'Required' : null,
+                decoration: const InputDecoration(labelText: 'Password'),
+                validator: (value) => value!.isEmpty ? 'Required' : null,
               ),
+              const SizedBox(height: 10),
               TextFormField(
                 controller: _confirmPasswordController,
-                decoration: const InputDecoration(labelText: 'Confirm Password'),
                 obscureText: true,
-                validator: (value) => value != _passwordController.text ? 'Passwords do not match' : null,
+                decoration: const InputDecoration(labelText: 'Confirm Password'),
+                validator: (value) => value != _passwordController.text
+                    ? 'Passwords do not match'
+                    : null,
               ),
-              const SizedBox(height: 12),
+              const SizedBox(height: 10),
+              TextFormField(
+                controller: _cityController,
+                decoration: const InputDecoration(labelText: 'City'),
+              ),
+              const SizedBox(height: 10),
               DropdownButtonFormField<String>(
                 value: _selectedCountry,
+                decoration: const InputDecoration(labelText: 'Country'),
                 items: countryStateMap.keys
                     .map((country) => DropdownMenuItem(
                           value: country,
                           child: Text(country),
                         ))
                     .toList(),
-                onChanged: (value) {
-                  setState(() {
-                    _selectedCountry = value!;
-                    _selectedState = null;
-                  });
-                },
-                decoration: const InputDecoration(labelText: 'Country'),
+                onChanged: (value) => setState(() {
+                  _selectedCountry = value!;
+                  _selectedState = null;
+                }),
               ),
+              const SizedBox(height: 10),
               DropdownButtonFormField<String>(
                 value: _selectedState,
+                decoration: const InputDecoration(labelText: 'State/Province'),
                 items: _statesForSelectedCountry
                     .map((state) => DropdownMenuItem(
                           value: state,
                           child: Text(state),
                         ))
                     .toList(),
-                onChanged: (value) {
-                  setState(() {
-                    _selectedState = value;
-                  });
-                },
-                decoration: const InputDecoration(labelText: 'State/Province'),
+                onChanged: (value) => setState(() => _selectedState = value!),
               ),
-              TextFormField(
-                controller: _cityController,
-                decoration: const InputDecoration(labelText: 'City'),
-              ),
+              const SizedBox(height: 10),
               if (_sponsorName != null)
+                Text('Sponsor: $_sponsorName'),
+              const SizedBox(height: 20),
+              Center(
+                child: ElevatedButton(
+                  onPressed: _register,
+                  child: const Text('Register'),
+                ),
+              ),
+              if (_errorMessage != null)
                 Padding(
-                  padding: const EdgeInsets.only(top: 12.0, bottom: 6.0),
-                  child: Row(
-                    children: [
-                      const Text('Your Sponsor: ', style: TextStyle(fontWeight: FontWeight.bold)),
-                      Text(_sponsorName!)
-                    ],
+                  padding: const EdgeInsets.only(top: 12.0),
+                  child: Text(
+                    _errorMessage!,
+                    style: const TextStyle(color: Colors.red),
                   ),
                 ),
-              const SizedBox(height: 20),
-              if (_isLoading) const CircularProgressIndicator(),
-              if (_errorMessage != null) ...[
-                Text(_errorMessage!, style: const TextStyle(color: Colors.red)),
-                const SizedBox(height: 10),
-              ],
-              ElevatedButton(
-                onPressed: _isLoading ? null : _register,
-                child: const Text('Create Account'),
-              ),
             ],
           ),
         ),
