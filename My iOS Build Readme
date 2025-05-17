@@ -1,0 +1,66 @@
+# TeamBuild+ iOS Build Setup Summary (tbp)
+
+## ✅ Overview
+This Flutter project targets **iOS only**, with a clean Dart-only architecture and Firebase REST integrations.
+All manual configuration for iOS build stability is captured here.
+
+---
+
+## ✅ Directory Structure Highlights
+- `ios/Flutter/Release.xcconfig` – Custom overrides for Release builds
+- `ios/Flutter/Debug.xcconfig` – Custom overrides for Debug builds
+- `pubspec.yaml` – Only declares Firebase REST + Firestore
+- `Podfile` – Uses `.ios/Flutter/podhelper.rb` for plugin integration
+
+---
+
+## 🔧 Configuration Requirements
+### Podfile
+```ruby
+platform :ios, '13.0'
+flutter_application_path = File.expand_path('..', __dir__)
+eval(File.read(File.join(flutter_application_path, '.ios', 'Flutter', 'podhelper.rb')), binding)
+```
+
+### Release.xcconfig
+```xcconfig
+PRODUCT_BUNDLE_IDENTIFIER = com.scott.tbp
+DEVELOPMENT_TEAM = YXV25WMDS8
+CODE_SIGN_IDENTITY = Apple Development
+IPHONEOS_DEPLOYMENT_TARGET = 13.0
+ENABLE_BITCODE = NO
+```
+
+### Debug.xcconfig
+```xcconfig
+PRODUCT_BUNDLE_IDENTIFIER = com.scott.tbp
+DEVELOPMENT_TEAM = YXV25WMDS8
+CODE_SIGN_IDENTITY = Apple Development
+IPHONEOS_DEPLOYMENT_TARGET = 13.0
+ENABLE_TESTABILITY = YES
+```
+
+---
+
+## ✅ Clean Build Instructions
+```bash
+flutter clean
+rm -rf ~/Library/Developer/Xcode/DerivedData/*
+flutter pub get
+flutter build ios
+cd ios
+pod install --repo-update
+open Runner.xcworkspace
+```
+
+---
+
+## 🧼 Backup & Versioning Tips
+- Always zip `lib/`, `ios/`, and `pubspec.yaml` → `tbp_files.zip`
+- Maintain a backup of the Podfile and .xcconfig files
+- Store `mybuildsettings_snapshot.txt` for post-build comparisons
+
+---
+
+## 🧾 License
+Internal TeamBuild+ iOS setup – do not distribute

@@ -1,0 +1,181 @@
+# TeamBuild+ Project Documentation
+
+## 🔐 Authentication and Session Flow
+
+**Auth Provider:** Firebase (REST API only)
+
+**Identity Flow:**
+
+* Uses Firebase Identity Toolkit REST endpoints for all email/password authentication.
+* Upon login:
+
+  1. `AuthService.signInWithEmailAndPassword()` is called.
+  2. Firebase returns an ID token and a refresh token.
+  3. The app immediately exchanges the refresh token for an access token via `securetoken.googleapis.com`.
+  4. `SessionManager` singleton stores:
+
+     * `UserModel` (email, uid, name, createdAt)
+     * `idToken` (for backward compatibility)
+     * `accessToken` (used for all Firestore REST operations)
+  5. User profile is retrieved using the `getUserProfileByEmail` Cloud Function.
+
+**Session Strategy:**
+
+* Session state is managed in memory via `SessionManager`.
+* Tokens are passed explicitly between screens.
+* No use of native secure storage or shared\_preferences.
+
+## ☁️ Cloud Functions (Current and Historical)
+
+**Environment:** Firebase Cloud Functions v2 (Node.js 22)
+
+**Active Functions:**
+
+1. `getDownlineUsers`
+
+   * Method: `GET`
+   * Requires: `x-user-email` header
+   * Returns: All Firestore user documents in the downline
+
+2. `getUserProfileByEmail`
+
+   * Method: `GET`
+   * Requires: `x-user-email` header
+   * Returns: A single matching Firestore user document
+
+**Deprecated Functions:**
+
+* **Direct REST Firestore calls from client:**
+
+  * Removed due to persistent 401 issues when validating access tokens.
+
+* **`getUserProfile`:**
+
+  * Retired in favor of `getUserProfileByEmail` for simpler access control.
+
+## 🔄 REST Strategy vs Native SDK
+
+**Why REST only?**
+
+* Eliminates build failures caused by gRPC, CocoaPods, or native plugin entanglement.
+* Enables lean iOS builds and seamless CI integration.
+* Improves token traceability and access control.
+
+**APIs Used:**
+
+* Firebase Identity Toolkit (Auth)
+* Secure Token API (Token refresh)
+* Firestore REST API for all reads/writes
+* Cloud Functions for secure server-side logic
+
+**Benefits:**
+
+* Clear, consistent behavior and debugging via `curl`
+* Fully transparent token lifecycle
+* No dependency on native SDKs
+
+**Tradeoffs:**
+
+* Manual implementation of access token refresh
+* Verbose request setup for authenticated Firestore calls
+
+## 📂 Directory & File Structure
+
+**Key Dart Services:**
+
+* `auth_service.dart`: Handles sign-in, token exchange, and session bootstrap
+* `session_manager.dart`: Singleton memory-based session
+* `firestore_service.dart`: Cloud Function wrappers for Firestore access
+* `user_model.dart`: Core model for user identity and profile fields
+
+**Primary Screens:**
+
+* `login_screen.dart`: Entry point UI with forgot password + registration path
+* `complete_profile_screen.dart`: Profile setup form
+* `dashboard_screen.dart`: Post-login user dashboard
+* `onboarding_screen.dart`: Introductory walkthrough (shown on first launch)
+* `downline_team_screen.dart`: Displays user hierarchy
+
+**Cloud Functions:**
+
+* Located in `/functions/index.js`
+* Contains `getUserProfileByEmail` and `getDownlineUsers`
+
+**File Tree Snapshot:**
+
+```
+lib/
+├── config.dart
+├── models/
+│   └── user_model.dart
+├── screens/
+│   ├── complete_profile_screen.dart
+│   ├── dashboard_screen.dart
+│   ├── downline_team_screen.dart
+│   ├── login_screen.dart
+│   └── onboarding_screen.dart
+├── services/
+│   ├── auth_service.dart
+│   ├── firestore_service.dart
+│   └── session_manager.dart
+```
+
+## 🚣 .env Strategy
+
+* The `.env` file has been renamed to `env.prod` and added to Xcode's **Copy Bundle Resources**.
+* Loaded via `flutter_dotenv` at app start:
+
+```dart
+await dotenv.load(fileName: 'env.prod');
+```
+
+* `config.dart` now provides typed access to:
+
+  * `GOOGLE_API_KEY`
+  * `BASE_URL`
+* Ensures secrets are not hardcoded anywhere in the repo.
+
+## 🚩 Known Simulator Rendering Issue
+
+**Issue:**
+
+* Login screen does not render despite successful Xcode builds.
+* `main.dart` and `pubspec.yaml` are correctly configured.
+* Simulator log reports:
+
+  ```
+  Unhandled Exception: Instance of 'FileNotFoundError'
+  #0      DotEnv._getEntriesFromFile
+  ```
+
+**Suspected Cause:**
+
+* Even after proper `.env` file inclusion and asset declaration in `pubspec.yaml`, the app fails to read the file.
+
+**Confirmed Fix Attempts:**
+
+* `.env` renamed to `env.prod`
+* Added to `assets/` folder
+* Declared in `pubspec.yaml`
+* Registered in Xcode Build Phases (Copy Bundle Resources)
+* Manually verified presence in build path
+
+## 🚦 Roadmap Checkpoints
+
+### ✅ Completed
+
+* Replaced all native Firebase SDK calls with REST equivalents
+* Rebuilt and redeployed Cloud Functions
+* Eliminated persistent 401 issues with `x-user-email` header strategy
+* Introduced `config.dart` for secure env access
+* Setup git sync script with semantic versioning
+
+### ⏳ Next Steps
+
+1. Resolve Login UI blank screen due to `.env` load failure
+2. Expand `config.dart` to cover all global constants
+3. Standardize service API layers with fallback + retry logic
+4. Restore visual/UX polish from legacy `screens_old.zip` via manual patching
+5. Finalize release builds and prepare App Store submission pipeline
+
+---
