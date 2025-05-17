@@ -8,6 +8,14 @@ class SessionManager {
   static const _userKey = 'user';
   static const _biometricKey = 'biometric_enabled';
 
+    // PATCH START: Save user to local session storage
+  Future<void> saveUser(UserModel user) async {
+    final prefs = await SharedPreferences.getInstance();
+    final userMap = user.toMap();
+    prefs.setString('user', jsonEncode(userMap));
+  }
+  // PATCH END
+
   Future<void> setCurrentUser(UserModel user) async {
     final prefs = await SharedPreferences.getInstance();
     final userJson = jsonEncode(user.toMap());

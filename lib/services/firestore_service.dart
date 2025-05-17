@@ -1,3 +1,4 @@
+
 // PATCHED — firestore_service.dart with uid validation, diagnostics, and sponsor name lookup
 
 import 'package:cloud_firestore/cloud_firestore.dart';
@@ -36,6 +37,18 @@ class FirestoreService {
     print('📦 Update Payload: $updates');
     await _firestore.collection('users').doc(uid).update(updates);
   }
+
+  // PATCH START: Add single-field update method
+  Future<void> updateUserField(String uid, String field, dynamic value) async {
+    try {
+      await _firestore.collection('users').doc(uid).update({field: value});
+      print('✅ Firestore field "$field" updated successfully for user $uid');
+    } catch (e) {
+      print('❌ Failed to update field "$field" for user $uid: $e');
+      rethrow;
+    }
+  }
+  // PATCH END
 
   Future<String> getUserFullName(String uid) async {
     try {

@@ -57,6 +57,57 @@ class _ProfileScreenState extends State<ProfileScreen> {
     }
   }
 
+  final ImagePicker _picker = ImagePicker();
+
+  Future<void> _showImageSourceActionSheet(BuildContext context) async {
+    final source = await showModalBottomSheet<ImageSource>(
+      context: context,
+      builder: (context) => SafeArea(
+        child: Wrap(
+          children: [
+            ListTile(
+              leading: const Icon(Icons.photo_camera),
+              title: const Text('Take a Photo'),
+              onTap: () => Navigator.pop(context, ImageSource.camera),
+            ),
+            ListTile(
+              leading: const Icon(Icons.photo_library),
+              title: const Text('Choose from Gallery'),
+              onTap: () => Navigator.pop(context, ImageSource.gallery),
+            ),
+          ],
+        ),
+      ),
+    );
+
+    if (source != null) {
+      final pickedFile = await _picker.pickImage(source: source);
+      if (pickedFile != null) {
+        File imageFile = File(pickedFile.path);
+        try {
+          final storageRef = FirebaseStorage.instance
+              .ref()
+              .child('user_profile_photos/${_user!.uid}.jpg');
+
+          await storageRef.putFile(imageFile);
+          final downloadUrl = await storageRef.getDownloadURL();
+
+          await FirestoreService().updateUserField(_user!.uid, 'photoUrl', downloadUrl);
+
+          final updatedUser = _user!.copyWith(photoUrl: downloadUrl);
+          await SessionManager().saveUser(updatedUser);
+          setState(() {
+            _user = updatedUser;
+          });
+
+          print('✅ Image uploaded and profile updated successfully');
+        } catch (e) {
+          print('❌ Error uploading image: $e');
+        }
+      }
+    }
+  }
+
   Future<void> _loadBiometricSetting() async {
     final enabled = await SessionManager().getBiometricEnabled();
     setState(() {
@@ -139,22 +190,28 @@ class _ProfileScreenState extends State<ProfileScreen> {
                       child: Stack(
                         alignment: Alignment.bottomRight,
                         children: [
-                          CircleAvatar(
-                            radius: 50,
-                            backgroundImage: _user!.photoUrl != null && _user!.photoUrl!.isNotEmpty
-                                ? NetworkImage(_user!.photoUrl!)
-                                : const AssetImage('assets/images/default_avatar.png') as ImageProvider,
-                          ),
-                          Container(
-                            decoration: BoxDecoration(
-                              shape: BoxShape.circle,
-                              color: Colors.black54,
+                          GestureDetector(
+                            onTap: () => _showImageSourceActionSheet(context),
+                            child: CircleAvatar(
+                              radius: 50,
+                              backgroundImage: _user!.photoUrl != null && _user!.photoUrl!.isNotEmpty
+                                  ? NetworkImage(_user!.photoUrl!)
+                                  : const AssetImage('assets/images/default_avatar.png') as ImageProvider,
                             ),
-                            padding: const EdgeInsets.all(6),
-                            child: const Icon(
-                              Icons.camera_alt,
-                              color: Colors.white,
-                              size: 20,
+                          ),
+                          GestureDetector(
+                            onTap: () => _showImageSourceActionSheet(context),
+                            child: Container(
+                              decoration: BoxDecoration(
+                                shape: BoxShape.circle,
+                                color: Colors.black54,
+                              ),
+                              padding: const EdgeInsets.all(6),
+                              child: const Icon(
+                                Icons.camera_alt,
+                                color: Colors.white,
+                                size: 20,
+                              ),
                             ),
                           ),
                         ],
