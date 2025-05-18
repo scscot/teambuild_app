@@ -1,8 +1,11 @@
-// PATCH START: SDK-based downline rendering using defined 'level' values
+// PATCH START: SDK-based downline rendering using defined 'level' values + search filter with debounce + manual search trigger
 import 'package:flutter/material.dart';
+import 'dart:async';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import '../models/user_model.dart';
+import '../services/session_manager.dart';
+import 'login_screen.dart';
 
 enum JoinWindow {
   all,
@@ -24,6 +27,9 @@ class _DownlineTeamScreenState extends State<DownlineTeamScreen> {
   JoinWindow selectedJoinWindow = JoinWindow.all;
   Map<int, List<UserModel>> downlineByLevel = {};
   final currentUser = FirebaseAuth.instance.currentUser;
+  final TextEditingController _searchController = TextEditingController();
+  String _searchQuery = '';
+  Timer? _debounce;
 
   @override
   void initState() {
@@ -31,11 +37,29 @@ class _DownlineTeamScreenState extends State<DownlineTeamScreen> {
     fetchDownline();
   }
 
+  @override
+  void dispose() {
+    _debounce?.cancel();
+    _searchController.dispose();
+    super.dispose();
+  }
+
   DateTime? _parseTimestamp(dynamic value) {
     if (value == null) return null;
     if (value is Timestamp) return value.toDate();
     if (value is String) return DateTime.tryParse(value);
     return null;
+  }
+
+  bool userMatchesSearch(UserModel user) {
+    final query = _searchQuery.toLowerCase();
+    return [
+      user.firstName,
+      user.lastName,
+      user.city,
+      user.state,
+      user.country
+    ].any((field) => field != null && field.toLowerCase().contains(query));
   }
 
   Future<void> fetchDownline() async {
@@ -80,19 +104,21 @@ class _DownlineTeamScreenState extends State<DownlineTeamScreen> {
         final now = DateTime.now();
 
         Duration? filterDuration;
-        switch (selectedJoinWindow) {
-          case JoinWindow.last24:
-            filterDuration = const Duration(hours: 24);
-            break;
-          case JoinWindow.last7:
-            filterDuration = const Duration(days: 7);
-            break;
-          case JoinWindow.last30:
-            filterDuration = const Duration(days: 30);
-            break;
-          case JoinWindow.all:
-          default:
-            filterDuration = null;
+        if (_searchQuery.isEmpty) {
+          switch (selectedJoinWindow) {
+            case JoinWindow.last24:
+              filterDuration = const Duration(hours: 24);
+              break;
+            case JoinWindow.last7:
+              filterDuration = const Duration(days: 7);
+              break;
+            case JoinWindow.last30:
+              filterDuration = const Duration(days: 30);
+              break;
+            case JoinWindow.all:
+            default:
+              filterDuration = null;
+          }
         }
 
         for (var user in direct) {
@@ -100,17 +126,17 @@ class _DownlineTeamScreenState extends State<DownlineTeamScreen> {
             final joined = user.joined;
             if (filterDuration != null && joined != null) {
               final cutoff = now.subtract(filterDuration);
-              if (joined.isBefore(cutoff)) {
-                continue; // skip user not within selected join window
-              }
+              if (joined.isBefore(cutoff)) continue;
             }
-
-            grouped.putIfAbsent(user.level!, () => []).add(user);
 
             if (!visited.contains(user.referralCode)) {
               visited.add(user.referralCode ?? '');
               collectDownline(user.referralCode ?? '');
             }
+
+            if (_searchQuery.isNotEmpty && !userMatchesSearch(user)) continue;
+
+            grouped.putIfAbsent(user.level!, () => []).add(user);
           }
         }
       }
@@ -122,7 +148,8 @@ class _DownlineTeamScreenState extends State<DownlineTeamScreen> {
       });
 
       setState(() {
-        downlineByLevel = grouped;
+        downlineByLevel = Map.fromEntries(grouped.entries.toList()
+          ..sort((a, b) => a.key.compareTo(b.key)));
       });
     } catch (e) {
       debugPrint('Error loading downline: $e');
@@ -154,30 +181,67 @@ class _DownlineTeamScreenState extends State<DownlineTeamScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(title: const Text('Downline Team')),
+      appBar: AppBar(
+        title: const Text('Downline Team'),
+        actions: [
+          IconButton(
+            icon: const Icon(Icons.logout),
+            onPressed: () async {
+              await SessionManager().setLogoutTimestamp();
+              await SessionManager().clearSession();
+              if (mounted) {
+                Navigator.of(context).pushAndRemoveUntil(
+                  MaterialPageRoute(builder: (_) => const LoginScreen()),
+                  (route) => false,
+                );
+              }
+            },
+          ),
+        ],
+      ),
       body: isLoading
           ? const Center(child: CircularProgressIndicator())
           : Column(
               children: [
                 Padding(
-                  padding: const EdgeInsets.all(16.0),
-                  child: DropdownButton<JoinWindow>(
-                    isExpanded: true,
-                    value: selectedJoinWindow,
+                  padding: const EdgeInsets.fromLTRB(16, 16, 16, 8),
+                  child: TextField(
+                    controller: _searchController,
+                    decoration: InputDecoration(
+                      hintText: 'Search downline...',
+                      prefixIcon: const Icon(Icons.search),
+                      border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
+                    ),
                     onChanged: (value) {
-                      if (value != null) {
-                        setState(() => selectedJoinWindow = value);
-                        fetchDownline();
-                      }
+  setState(() => _searchQuery = value);
+  if (value.trim().isEmpty) fetchDownline();
                     },
-                    items: JoinWindow.values.map((window) {
-                      return DropdownMenuItem(
-                        value: window,
-                        child: Text(_dropdownLabel(window)),
-                      );
-                    }).toList(),
+                    onSubmitted: (value) {
+                      setState(() => _searchQuery = value);
+                      fetchDownline();
+                    },
                   ),
                 ),
+                if (_searchQuery.isEmpty)
+                  Padding(
+                    padding: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 4),
+                    child: DropdownButton<JoinWindow>(
+                      isExpanded: true,
+                      value: selectedJoinWindow,
+                      onChanged: (value) {
+                        if (value != null) {
+                          setState(() => selectedJoinWindow = value);
+                          fetchDownline();
+                        }
+                      },
+                      items: JoinWindow.values.map((window) {
+                        return DropdownMenuItem(
+                          value: window,
+                          child: Text(_dropdownLabel(window)),
+                        );
+                      }).toList(),
+                    ),
+                  ),
                 Expanded(
                   child: ListView(
                     children: downlineByLevel.entries.map((entry) {
@@ -186,11 +250,12 @@ class _DownlineTeamScreenState extends State<DownlineTeamScreen> {
                       return Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
+                          const Divider(thickness: 1),
                           Padding(
                             padding: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 10),
                             child: Text(
                               'Level $level (${users.length})',
-                              style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+                              style: const TextStyle(fontSize: 14, fontWeight: FontWeight.bold, color: Colors.blue),
                             ),
                           ),
                           ...users.map((user) => Padding(
@@ -222,7 +287,7 @@ class _DownlineTeamScreenState extends State<DownlineTeamScreen> {
                                       '🕒 Joined: ${user.joined != null ? user.joined!.toString().split(" ")[0] : 'Unknown'}',
                                       style: const TextStyle(fontSize: 13),
                                     ),
-                                    const Divider(thickness: 1),
+                                    
                                   ],
                                 ),
                               ))
