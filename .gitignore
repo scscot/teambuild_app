@@ -53,6 +53,7 @@ ios/Runner/*.ipa
 ios/Runner/Runner*.plist
 ios/Runner/Runner.entitlements
 ios_backup*/
+lib_backup/
 
 # Xcode & macOS
 *.xcuserstate
