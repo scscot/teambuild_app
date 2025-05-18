@@ -145,7 +145,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
   void _navigateToEditProfile() {
     Navigator.push(
       context,
-      MaterialPageRoute(builder: (_) => const EditProfileScreen()),
+      MaterialPageRoute(builder: (_) => EditProfileScreen(user: _user!)),
     ).then((_) => _loadUserData());
   }
 

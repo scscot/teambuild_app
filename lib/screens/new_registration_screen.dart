@@ -1,5 +1,4 @@
-// CLEAN PATCHED — new_registration_screen.dart with correct AuthService register return type
-
+// PATCH START: explicitly import global constant 'statesByCountry' from states_by_country.dart
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 import 'package:uuid/uuid.dart';
@@ -7,6 +6,7 @@ import '../models/user_model.dart';
 import '../services/auth_service.dart';
 import '../services/firestore_service.dart';
 import '../services/session_manager.dart';
+import '../data/states_by_country.dart';
 import 'dashboard_screen.dart';
 
 class NewRegistrationScreen extends StatefulWidget {
@@ -30,13 +30,7 @@ class _NewRegistrationScreenState extends State<NewRegistrationScreen> {
   String? _sponsorName;
   bool _isLoading = false;
 
-  final Map<String, List<String>> countryStateMap = {
-    'United States': ['California', 'New York', 'Texas'],
-    'Canada': ['Alberta', 'Ontario', 'Quebec'],
-    'India': ['Delhi', 'Maharashtra', 'Karnataka'],
-  };
-
-  List<String> get states => countryStateMap[_selectedCountry] ?? [];
+  List<String> get states => statesByCountry[_selectedCountry] ?? [];
 
   @override
   void dispose() {
@@ -49,9 +43,17 @@ class _NewRegistrationScreenState extends State<NewRegistrationScreen> {
     super.dispose();
   }
 
+  Future<int> _getReferrerLevel(String? referralCode) async {
+    if (referralCode == null || referralCode.isEmpty) return 1;
+    final referrer = await FirestoreService().getUserByReferralCode(referralCode);
+    if (referrer != null && referrer.level != null) {
+      return referrer.level! + 1;
+    }
+    return 1;
+  }
+
   Future<void> _register() async {
     if (!_formKey.currentState!.validate()) return;
-
     setState(() => _isLoading = true);
 
     try {
@@ -59,6 +61,10 @@ class _NewRegistrationScreenState extends State<NewRegistrationScreen> {
       final password = _passwordController.text.trim();
 
       UserModel user = await AuthService().register(email, password);
+
+      final referralCode = _referralCodeController.text.trim();
+      final referredBy = referralCode.isNotEmpty ? referralCode : null;
+      final level = await _getReferrerLevel(referredBy);
 
       final newUser = UserModel(
         uid: user.uid,
@@ -69,9 +75,8 @@ class _NewRegistrationScreenState extends State<NewRegistrationScreen> {
         country: _selectedCountry,
         state: _selectedState,
         referralCode: const Uuid().v4().substring(0, 8),
-        referredBy: _referralCodeController.text.trim().isNotEmpty
-            ? _referralCodeController.text.trim()
-            : null,
+        referredBy: referredBy,
+        level: level,
       );
 
       await FirestoreService().createUser(newUser.toMap());
@@ -158,7 +163,8 @@ class _NewRegistrationScreenState extends State<NewRegistrationScreen> {
               const SizedBox(height: 12),
               DropdownButtonFormField<String>(
                 value: _selectedCountry,
-                items: countryStateMap.keys
+                hint: const Text('Select Country'),
+                items: statesByCountry.keys
                     .map((country) => DropdownMenuItem(value: country, child: Text(country)))
                     .toList(),
                 onChanged: (value) => setState(() {
@@ -207,3 +213,4 @@ class _NewRegistrationScreenState extends State<NewRegistrationScreen> {
     );
   }
 }
+// PATCH END

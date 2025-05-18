@@ -1,3 +1,4 @@
+// PATCH START: add 'level' field to UserModel
 import 'package:cloud_firestore/cloud_firestore.dart';
 
 class UserModel {
@@ -12,6 +13,8 @@ class UserModel {
   final String? referredBy;
   final String? photoUrl;
   final DateTime? createdAt;
+  final DateTime? joined;
+  final int? level;
 
   UserModel({
     required this.uid,
@@ -25,6 +28,8 @@ class UserModel {
     this.referredBy,
     this.photoUrl,
     this.createdAt,
+    this.joined,
+    this.level,
   });
 
   Map<String, dynamic> toMap() {
@@ -40,6 +45,8 @@ class UserModel {
       'referredBy': referredBy,
       'photoUrl': photoUrl,
       'createdAt': createdAt?.toIso8601String(),
+      'joined': joined?.toIso8601String(),
+      'level': level,
     };
   }
 
@@ -56,6 +63,8 @@ class UserModel {
       referredBy: map['referredBy'],
       photoUrl: map['photoUrl'],
       createdAt: _parseTimestamp(map['createdAt']),
+      joined: _parseTimestamp(map['joined']),
+      level: map['level'],
     );
   }
 
@@ -83,6 +92,8 @@ class UserModel {
     String? referredBy,
     String? photoUrl,
     DateTime? createdAt,
+    DateTime? joined,
+    int? level,
   }) {
     return UserModel(
       uid: uid ?? this.uid,
@@ -96,6 +107,9 @@ class UserModel {
       referredBy: referredBy ?? this.referredBy,
       photoUrl: photoUrl ?? this.photoUrl,
       createdAt: createdAt ?? this.createdAt,
+      joined: joined ?? this.joined,
+      level: level ?? this.level,
     );
   }
 }
+// PATCH END

@@ -1,4 +1,4 @@
-// CLEAN PATCHED — dashboard_screen.dart with working logout logic and removed back icon
+// PATCH START: dashboard_screen.dart — corrected referredByUid to referredBy in DownlineTeamScreen
 
 import 'package:flutter/material.dart';
 import 'package:tbp/screens/downline_team_screen.dart';
@@ -81,7 +81,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
                       onPressed: () => Navigator.push(
                         context,
                         MaterialPageRoute(
-                          builder: (_) => DownlineTeamScreen(referredByUid: _user!.uid),
+                          builder: (_) => DownlineTeamScreen(referredBy: _user!.uid),
                         ),
                       ),
                       icon: const Icon(Icons.group),
@@ -93,4 +93,5 @@ class _DashboardScreenState extends State<DashboardScreen> {
             ),
     );
   }
-}    
+}
+// PATCH END

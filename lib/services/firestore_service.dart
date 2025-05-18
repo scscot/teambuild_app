@@ -1,5 +1,4 @@
-
-// PATCHED — firestore_service.dart with uid validation, diagnostics, and sponsor name lookup
+// PATCHED — firestore_service.dart with uid validation, diagnostics, sponsor name lookup, and referralCode user lookup
 
 import 'package:cloud_firestore/cloud_firestore.dart';
 import '../models/user_model.dart';
@@ -102,4 +101,23 @@ class FirestoreService {
       return 'N/A';
     }
   }
+
+  // PATCH START: Add missing method to fetch user by referralCode
+  Future<UserModel?> getUserByReferralCode(String code) async {
+    try {
+      final snapshot = await _firestore
+          .collection('users')
+          .where('referralCode', isEqualTo: code)
+          .limit(1)
+          .get();
+
+      if (snapshot.docs.isNotEmpty) {
+        return UserModel.fromFirestore(snapshot.docs.first);
+      }
+    } catch (e) {
+      print('❌ Error in getUserByReferralCode: $e');
+    }
+    return null;
+  }
+  // PATCH END
 }
