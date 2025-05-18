@@ -1,17 +1,16 @@
-// RESTORED — new_registration_screen.dart from uploaded file (225 lines)
+// CLEAN PATCHED — new_registration_screen.dart with correct AuthService register return type
 
 import 'package:flutter/material.dart';
-import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:intl/intl.dart';
+import 'package:uuid/uuid.dart';
+import '../models/user_model.dart';
 import '../services/auth_service.dart';
 import '../services/firestore_service.dart';
 import '../services/session_manager.dart';
-import '../models/user_model.dart';
 import 'dashboard_screen.dart';
-import '../data/states_by_country.dart';
 
 class NewRegistrationScreen extends StatefulWidget {
-  final String? referredBy;
-  const NewRegistrationScreen({super.key, this.referredBy});
+  const NewRegistrationScreen({super.key});
 
   @override
   State<NewRegistrationScreen> createState() => _NewRegistrationScreenState();
@@ -24,75 +23,20 @@ class _NewRegistrationScreenState extends State<NewRegistrationScreen> {
   final TextEditingController _emailController = TextEditingController();
   final TextEditingController _passwordController = TextEditingController();
   final TextEditingController _confirmPasswordController = TextEditingController();
-  final TextEditingController _cityController = TextEditingController();
-  bool _isLoading = false;
-  String? _errorMessage;
-  String _selectedCountry = 'United States';
+  final TextEditingController _referralCodeController = TextEditingController();
+
+  String? _selectedCountry;
   String? _selectedState;
   String? _sponsorName;
-  String? _referralCodeToSave;
+  bool _isLoading = false;
 
-  List<String> get _statesForSelectedCountry {
-    return countryStateMap[_selectedCountry] ?? [];
-  }
+  final Map<String, List<String>> countryStateMap = {
+    'United States': ['California', 'New York', 'Texas'],
+    'Canada': ['Alberta', 'Ontario', 'Quebec'],
+    'India': ['Delhi', 'Maharashtra', 'Karnataka'],
+  };
 
-  @override
-  void initState() {
-    super.initState();
-    _lookupSponsor();
-  }
-
-  Future<void> _lookupSponsor() async {
-    if (widget.referredBy != null && widget.referredBy!.isNotEmpty) {
-      final snapshot = await FirebaseFirestore.instance
-          .collection('users')
-          .where('referralCode', isEqualTo: widget.referredBy!)
-          .limit(1)
-          .get();
-
-      if (snapshot.docs.isNotEmpty) {
-        final data = snapshot.docs.first.data();
-        setState(() {
-          _sponsorName = '${data['firstName'] ?? ''} ${data['lastName'] ?? ''}'.trim();
-          _referralCodeToSave = widget.referredBy;
-        });
-      }
-    }
-  }
-
-  Future<void> _register() async {
-    if (!_formKey.currentState!.validate()) return;
-
-    setState(() => _isLoading = true);
-    try {
-      final success = await AuthService().register(
-        _emailController.text.trim(),
-        _passwordController.text.trim(),
-      );
-
-      if (!success) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Registration failed. Please try again.')),
-        );
-        setState(() => _isLoading = false);
-        return;
-      }
-
-      final user = await SessionManager().getCurrentUser();
-      if (user != null) {
-        Navigator.pushReplacement(
-          context,
-          MaterialPageRoute(builder: (_) => const DashboardScreen()),
-        );
-      }
-    } catch (e) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Registration error: \$e')),
-      );
-    } finally {
-      setState(() => _isLoading = false);
-    }
-  }
+  List<String> get states => countryStateMap[_selectedCountry] ?? [];
 
   @override
   void dispose() {
@@ -101,8 +45,69 @@ class _NewRegistrationScreenState extends State<NewRegistrationScreen> {
     _emailController.dispose();
     _passwordController.dispose();
     _confirmPasswordController.dispose();
-    _cityController.dispose();
+    _referralCodeController.dispose();
     super.dispose();
+  }
+
+  Future<void> _register() async {
+    if (!_formKey.currentState!.validate()) return;
+
+    setState(() => _isLoading = true);
+
+    try {
+      final email = _emailController.text.trim();
+      final password = _passwordController.text.trim();
+
+      UserModel user = await AuthService().register(email, password);
+
+      final newUser = UserModel(
+        uid: user.uid,
+        firstName: _firstNameController.text.trim(),
+        lastName: _lastNameController.text.trim(),
+        email: email,
+        createdAt: DateTime.now(),
+        country: _selectedCountry,
+        state: _selectedState,
+        referralCode: const Uuid().v4().substring(0, 8),
+        referredBy: _referralCodeController.text.trim().isNotEmpty
+            ? _referralCodeController.text.trim()
+            : null,
+      );
+
+      await FirestoreService().createUser(newUser.toMap());
+      await SessionManager().setCurrentUser(newUser);
+
+      if (mounted) {
+        Navigator.pushReplacement(
+          context,
+          MaterialPageRoute(builder: (_) => const DashboardScreen()),
+        );
+      }
+    } catch (e) {
+      print('❌ Registration error: $e');
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Registration failed: $e')),
+      );
+    } finally {
+      setState(() => _isLoading = false);
+    }
+  }
+
+  Future<void> _lookupSponsor() async {
+    final code = _referralCodeController.text.trim();
+    if (code.isEmpty) return;
+
+    try {
+      final name = await FirestoreService().getSponsorNameByReferralCode(code);
+      setState(() {
+        _sponsorName = name;
+      });
+    } catch (e) {
+      print('❌ Error retrieving sponsor name: $e');
+      setState(() {
+        _sponsorName = null;
+      });
+    }
   }
 
   @override
@@ -114,92 +119,87 @@ class _NewRegistrationScreenState extends State<NewRegistrationScreen> {
         child: Form(
           key: _formKey,
           child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               TextFormField(
                 controller: _firstNameController,
                 decoration: const InputDecoration(labelText: 'First Name'),
-                validator: (value) => value!.isEmpty ? 'Required' : null,
+                validator: (value) => value == null || value.isEmpty ? 'Enter your first name' : null,
               ),
-              const SizedBox(height: 10),
+              const SizedBox(height: 12),
               TextFormField(
                 controller: _lastNameController,
                 decoration: const InputDecoration(labelText: 'Last Name'),
-                validator: (value) => value!.isEmpty ? 'Required' : null,
+                validator: (value) => value == null || value.isEmpty ? 'Enter your last name' : null,
               ),
-              const SizedBox(height: 10),
+              const SizedBox(height: 12),
               TextFormField(
                 controller: _emailController,
-                keyboardType: TextInputType.emailAddress,
                 decoration: const InputDecoration(labelText: 'Email'),
-                validator: (value) => value!.isEmpty ? 'Required' : null,
+                keyboardType: TextInputType.emailAddress,
+                validator: (value) =>
+                    value == null || !value.contains('@') ? 'Enter a valid email' : null,
               ),
-              const SizedBox(height: 10),
+              const SizedBox(height: 12),
               TextFormField(
                 controller: _passwordController,
-                obscureText: true,
                 decoration: const InputDecoration(labelText: 'Password'),
-                validator: (value) => value!.isEmpty ? 'Required' : null,
+                obscureText: true,
+                validator: (value) =>
+                    value == null || value.length < 6 ? 'Password must be at least 6 characters' : null,
               ),
-              const SizedBox(height: 10),
+              const SizedBox(height: 12),
               TextFormField(
                 controller: _confirmPasswordController,
-                obscureText: true,
                 decoration: const InputDecoration(labelText: 'Confirm Password'),
-                validator: (value) => value != _passwordController.text
-                    ? 'Passwords do not match'
-                    : null,
+                obscureText: true,
+                validator: (value) =>
+                    value != _passwordController.text ? 'Passwords do not match' : null,
               ),
-              const SizedBox(height: 10),
-              TextFormField(
-                controller: _cityController,
-                decoration: const InputDecoration(labelText: 'City'),
-              ),
-              const SizedBox(height: 10),
+              const SizedBox(height: 12),
               DropdownButtonFormField<String>(
                 value: _selectedCountry,
-                decoration: const InputDecoration(labelText: 'Country'),
                 items: countryStateMap.keys
-                    .map((country) => DropdownMenuItem(
-                          value: country,
-                          child: Text(country),
-                        ))
+                    .map((country) => DropdownMenuItem(value: country, child: Text(country)))
                     .toList(),
                 onChanged: (value) => setState(() {
-                  _selectedCountry = value!;
+                  _selectedCountry = value;
                   _selectedState = null;
                 }),
+                decoration: const InputDecoration(labelText: 'Country'),
               ),
-              const SizedBox(height: 10),
+              const SizedBox(height: 12),
               DropdownButtonFormField<String>(
                 value: _selectedState,
-                decoration: const InputDecoration(labelText: 'State/Province'),
-                items: _statesForSelectedCountry
-                    .map((state) => DropdownMenuItem(
-                          value: state,
-                          child: Text(state),
-                        ))
+                items: states
+                    .map((state) => DropdownMenuItem(value: state, child: Text(state)))
                     .toList(),
-                onChanged: (value) => setState(() => _selectedState = value!),
+                onChanged: (value) => setState(() => _selectedState = value),
+                decoration: const InputDecoration(labelText: 'State/Province'),
               ),
-              const SizedBox(height: 10),
-              if (_sponsorName != null)
-                Text('Sponsor: $_sponsorName'),
-              const SizedBox(height: 20),
-              Center(
-                child: ElevatedButton(
-                  onPressed: _register,
-                  child: const Text('Register'),
-                ),
+              const SizedBox(height: 12),
+              TextFormField(
+                controller: _referralCodeController,
+                decoration: const InputDecoration(labelText: 'Referral Code (optional)'),
+                onChanged: (_) => _lookupSponsor(),
               ),
-              if (_errorMessage != null)
+              if (_sponsorName != null && _sponsorName!.isNotEmpty)
                 Padding(
-                  padding: const EdgeInsets.only(top: 12.0),
+                  padding: const EdgeInsets.only(top: 8.0),
                   child: Text(
-                    _errorMessage!,
-                    style: const TextStyle(color: Colors.red),
+                    'Referred by: $_sponsorName',
+                    style: const TextStyle(fontWeight: FontWeight.w600),
                   ),
                 ),
+              const SizedBox(height: 24),
+              SizedBox(
+                width: double.infinity,
+                child: ElevatedButton(
+                  onPressed: _isLoading ? null : _register,
+                  child: _isLoading
+                      ? const CircularProgressIndicator(color: Colors.white)
+                      : const Text('Create Account'),
+                ),
+              ),
             ],
           ),
         ),

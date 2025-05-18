@@ -1,11 +1,14 @@
-// CLEAN PATCHED — login_screen.dart with biometric login support and fixed AuthService return type
+// CLEAN PATCHED — login_screen.dart with biometric login support and corrected AuthService method
 
 import 'package:flutter/material.dart';
 import 'package:local_auth/local_auth.dart';
+import 'package:firebase_auth/firebase_auth.dart';
 import '../services/auth_service.dart';
+import '../services/firestore_service.dart';
 import '../services/session_manager.dart';
 import '../models/user_model.dart';
 import 'dashboard_screen.dart';
+import 'new_registration_screen.dart';
 
 class LoginScreen extends StatefulWidget {
   const LoginScreen({super.key});
@@ -27,12 +30,16 @@ class _LoginScreenState extends State<LoginScreen> {
   }
 
   Future<void> _tryBiometricLogin() async {
+    if (await SessionManager().isLogoutCooldownActive(5)) {
+      print('⏳ Skipping biometric login — logout cooldown in effect');
+      return;
+    }
+
     final enabled = await SessionManager().getBiometricEnabled();
     if (!enabled) return;
 
     final auth = LocalAuthentication();
     final canAuth = await auth.canCheckBiometrics && await auth.isDeviceSupported();
-
     if (!canAuth) return;
 
     try {
@@ -42,15 +49,23 @@ class _LoginScreenState extends State<LoginScreen> {
       );
 
       if (didAuthenticate) {
-        final user = await SessionManager().getCurrentUser();
-        if (user != null) {
-          Navigator.pushReplacement(
-            context,
-            MaterialPageRoute(builder: (_) => const DashboardScreen()),
-          );
-        } else {
-          print('❌ No user session found after biometric login');
+        // Attempt to restore session from FirebaseAuth
+        final currentUser = FirebaseAuth.instance.currentUser;
+        if (currentUser != null && currentUser.uid.isNotEmpty) {
+          final userData = await FirestoreService().getUserData(currentUser.uid);
+          if (userData != null) {
+            final fullUser = UserModel.fromMap(userData).copyWith(uid: currentUser.uid);
+            await SessionManager().setCurrentUser(fullUser);
+            if (mounted) {
+              Navigator.pushReplacement(
+                context,
+                MaterialPageRoute(builder: (_) => const DashboardScreen()),
+              );
+            }
+            return;
+          }
         }
+        print('❌ No user session found after biometric login');
       }
     } catch (e) {
       print('❌ Biometric login error: $e');
@@ -66,15 +81,11 @@ class _LoginScreenState extends State<LoginScreen> {
         _emailController.text.trim(),
         _passwordController.text.trim(),
       );
-      if (user is UserModel) {
-        await SessionManager().saveUser(user);
-        Navigator.pushReplacement(
-          context,
-          MaterialPageRoute(builder: (_) => const DashboardScreen()),
-        );
-      } else {
-        throw Exception('Invalid user response from AuthService');
-      }
+      await SessionManager().saveUser(user);
+      Navigator.pushReplacement(
+        context,
+        MaterialPageRoute(builder: (_) => const DashboardScreen()),
+      );
     } catch (e) {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(content: Text('Login failed: $e')),
@@ -114,6 +125,16 @@ class _LoginScreenState extends State<LoginScreen> {
                 child: _isLoading
                     ? const CircularProgressIndicator(color: Colors.white)
                     : const Text('Login'),
+              ),
+              const SizedBox(height: 16),
+              TextButton(
+                onPressed: () {
+                  Navigator.push(
+                    context,
+                    MaterialPageRoute(builder: (_) => const NewRegistrationScreen()),
+                  );
+                },
+                child: const Text('Create Account'),
               )
             ],
           ),

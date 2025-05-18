@@ -11,6 +11,7 @@ import '../services/session_manager.dart';
 import '../models/user_model.dart';
 import '../services/firestore_service.dart';
 import 'edit_profile_screen.dart';
+import 'login_screen.dart'; // ✅ Added for logout redirect
 
 class ProfileScreen extends StatefulWidget {
   const ProfileScreen({super.key});
@@ -124,7 +125,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
         } catch (e) {
           print('❌ Error uploading image: $e');
         } finally {
-          Navigator.of(context).pop();
+          Navigator.of(context).pop(); // dismiss spinner
         }
       }
     }
@@ -136,6 +137,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
   }
 
   Future<void> _toggleBiometric(bool value) async {
+    print('🟢 Biometric toggle set to: $value');
     setState(() => _biometricEnabled = value);
     await SessionManager().setBiometricEnabled(value);
   }
@@ -157,9 +159,13 @@ class _ProfileScreenState extends State<ProfileScreen> {
           IconButton(
             icon: const Icon(Icons.logout),
             onPressed: () async {
+              await SessionManager().setLogoutTimestamp();
               await SessionManager().clearSession();
               if (mounted) {
-                Navigator.of(context).popUntil((route) => route.isFirst);
+                Navigator.of(context).pushAndRemoveUntil(
+                  MaterialPageRoute(builder: (_) => const LoginScreen()),
+                  (route) => false,
+                );
               }
             },
           )
@@ -209,9 +215,11 @@ class _ProfileScreenState extends State<ProfileScreen> {
                   _buildInfoRow('City', _user!.city ?? 'N/A'),
                   _buildInfoRow('State/Province', _user!.state ?? 'N/A'),
                   _buildInfoRow('Country', _user!.country ?? 'N/A'),
-                  _buildInfoRow('Join Date', _user!.createdAt != null
-                      ? DateFormat.yMMMMd().format(_user!.createdAt!)
-                      : 'N/A'),
+                  _buildInfoRow(
+                      'Join Date',
+                      _user!.createdAt != null
+                          ? DateFormat.yMMMMd().format(_user!.createdAt!)
+                          : 'N/A'),
                   if (_sponsorName != null && _sponsorName!.isNotEmpty)
                     _buildInfoRow('Sponsor Name', _sponsorName!),
                   const SizedBox(height: 30),
