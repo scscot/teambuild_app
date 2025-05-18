@@ -12,6 +12,7 @@ import '../models/user_model.dart';
 import '../services/firestore_service.dart';
 import 'edit_profile_screen.dart';
 import 'login_screen.dart'; // ✅ Added for logout redirect
+import '../widgets/header_widgets.dart'; // ✅ Added header widget
 
 class ProfileScreen extends StatefulWidget {
   const ProfileScreen({super.key});
@@ -152,101 +153,98 @@ class _ProfileScreenState extends State<ProfileScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(
-        title: const Text('My Profile'),
-        automaticallyImplyLeading: true,
-        actions: [
-          IconButton(
-            icon: const Icon(Icons.logout),
-            onPressed: () async {
-              await SessionManager().setLogoutTimestamp();
-              await SessionManager().clearSession();
-              if (mounted) {
-                Navigator.of(context).pushAndRemoveUntil(
-                  MaterialPageRoute(builder: (_) => const LoginScreen()),
-                  (route) => false,
-                );
-              }
-            },
-          )
-        ],
-      ),
-      body: _user == null
-          ? const Center(child: CircularProgressIndicator())
-          : SingleChildScrollView(
-              padding: const EdgeInsets.all(16.0),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Center(
-                    child: GestureDetector(
-                      onTap: _showImageSourceActionSheetWrapper,
-                      child: Stack(
-                        alignment: Alignment.bottomRight,
-                        children: [
-                          CircleAvatar(
-                            radius: 50,
-                            backgroundImage: _user!.photoUrl != null && _user!.photoUrl!.isNotEmpty
-                                ? NetworkImage(_user!.photoUrl!)
-                                : const AssetImage('assets/images/default_avatar.png') as ImageProvider,
+      body: Column(
+        children: [
+          const AppHeaderWithMenu(),
+          Expanded(
+            child: _user == null
+                ? const Center(child: CircularProgressIndicator())
+                : SingleChildScrollView(
+                    padding: const EdgeInsets.all(16.0),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        const Padding(
+                          padding: EdgeInsets.only(top: 16.0, bottom: 24.0),
+                          child: Center(
+                            child: Text(
+                              'My Profile',
+                              style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
+                            ),
                           ),
-                          GestureDetector(
+                        ),
+                        Center(
+                          child: GestureDetector(
                             onTap: _showImageSourceActionSheetWrapper,
-                            child: Container(
-                              decoration: BoxDecoration(
-                                shape: BoxShape.circle,
-                                color: Colors.black54,
-                              ),
-                              padding: const EdgeInsets.all(6),
-                              child: const Icon(
-                                Icons.camera_alt,
-                                color: Colors.white,
-                                size: 20,
+                            child: Stack(
+                              alignment: Alignment.bottomRight,
+                              children: [
+                                CircleAvatar(
+                                  radius: 50,
+                                  backgroundImage: _user!.photoUrl != null && _user!.photoUrl!.isNotEmpty
+                                      ? NetworkImage(_user!.photoUrl!)
+                                      : const AssetImage('assets/images/default_avatar.png') as ImageProvider,
+                                ),
+                                GestureDetector(
+                                  onTap: _showImageSourceActionSheetWrapper,
+                                  child: Container(
+                                    decoration: BoxDecoration(
+                                      shape: BoxShape.circle,
+                                      color: Colors.black54,
+                                    ),
+                                    padding: const EdgeInsets.all(6),
+                                    child: const Icon(
+                                      Icons.camera_alt,
+                                      color: Colors.white,
+                                      size: 20,
+                                    ),
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
+                        ),
+                        const SizedBox(height: 20),
+                        _buildInfoRow('Name', '${_user!.firstName} ${_user!.lastName}'),
+                        _buildInfoRow('Email', _user!.email),
+                        _buildInfoRow('City', _user!.city ?? 'N/A'),
+                        _buildInfoRow('State/Province', _user!.state ?? 'N/A'),
+                        _buildInfoRow('Country', _user!.country ?? 'N/A'),
+                        _buildInfoRow(
+                            'Join Date',
+                            _user!.createdAt != null
+                                ? DateFormat.yMMMMd().format(_user!.createdAt!)
+                                : 'N/A'),
+                        if (_sponsorName != null && _sponsorName!.isNotEmpty)
+                          _buildInfoRow('Sponsor Name', _sponsorName!),
+                        const SizedBox(height: 30),
+                        Center(
+                          child: ElevatedButton.icon(
+                            onPressed: _navigateToEditProfile,
+                            icon: const Icon(Icons.edit),
+                            label: const Text('Edit Profile'),
+                            style: ElevatedButton.styleFrom(
+                              padding: const EdgeInsets.symmetric(horizontal: 24.0, vertical: 12.0),
+                              textStyle: const TextStyle(fontSize: 16),
+                              shape: RoundedRectangleBorder(
+                                borderRadius: BorderRadius.circular(8.0),
                               ),
                             ),
                           ),
-                        ],
-                      ),
-                    ),
-                  ),
-                  const SizedBox(height: 20),
-                  _buildInfoRow('Name', '${_user!.firstName} ${_user!.lastName}'),
-                  _buildInfoRow('Email', _user!.email),
-                  _buildInfoRow('City', _user!.city ?? 'N/A'),
-                  _buildInfoRow('State/Province', _user!.state ?? 'N/A'),
-                  _buildInfoRow('Country', _user!.country ?? 'N/A'),
-                  _buildInfoRow(
-                      'Join Date',
-                      _user!.createdAt != null
-                          ? DateFormat.yMMMMd().format(_user!.createdAt!)
-                          : 'N/A'),
-                  if (_sponsorName != null && _sponsorName!.isNotEmpty)
-                    _buildInfoRow('Sponsor Name', _sponsorName!),
-                  const SizedBox(height: 30),
-                  Center(
-                    child: ElevatedButton.icon(
-                      onPressed: _navigateToEditProfile,
-                      icon: const Icon(Icons.edit),
-                      label: const Text('Edit Profile'),
-                      style: ElevatedButton.styleFrom(
-                        padding: const EdgeInsets.symmetric(horizontal: 24.0, vertical: 12.0),
-                        textStyle: const TextStyle(fontSize: 16),
-                        shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(8.0),
                         ),
-                      ),
+                        const SizedBox(height: 20),
+                        if (_biometricsAvailable)
+                          SwitchListTile(
+                            title: const Text('Enable Face ID / Touch ID'),
+                            value: _biometricEnabled,
+                            onChanged: _toggleBiometric,
+                          ),
+                      ],
                     ),
                   ),
-                  const SizedBox(height: 20),
-                  if (_biometricsAvailable)
-                    SwitchListTile(
-                      title: const Text('Enable Face ID / Touch ID'),
-                      value: _biometricEnabled,
-                      onChanged: _toggleBiometric,
-                    ),
-                ],
-              ),
-            ),
+          ),
+        ],
+      ),
     );
   }
 

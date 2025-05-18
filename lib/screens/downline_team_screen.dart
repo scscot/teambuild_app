@@ -6,6 +6,7 @@ import 'package:firebase_auth/firebase_auth.dart';
 import '../models/user_model.dart';
 import '../services/session_manager.dart';
 import 'login_screen.dart';
+import '../widgets/header_widgets.dart';
 
 enum JoinWindow {
   all,
@@ -181,126 +182,123 @@ class _DownlineTeamScreenState extends State<DownlineTeamScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(
-        title: const Text('Downline Team'),
-        actions: [
-          IconButton(
-            icon: const Icon(Icons.logout),
-            onPressed: () async {
-              await SessionManager().setLogoutTimestamp();
-              await SessionManager().clearSession();
-              if (mounted) {
-                Navigator.of(context).pushAndRemoveUntil(
-                  MaterialPageRoute(builder: (_) => const LoginScreen()),
-                  (route) => false,
-                );
-              }
-            },
-          ),
-        ],
-      ),
-      body: isLoading
-          ? const Center(child: CircularProgressIndicator())
-          : Column(
-              children: [
-                Padding(
-                  padding: const EdgeInsets.fromLTRB(16, 16, 16, 8),
-                  child: TextField(
-                    controller: _searchController,
-                    decoration: InputDecoration(
-                      hintText: 'Search downline...',
-                      prefixIcon: const Icon(Icons.search),
-                      border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
-                    ),
-                    onChanged: (value) {
-  setState(() => _searchQuery = value);
-  if (value.trim().isEmpty) fetchDownline();
-                    },
-                    onSubmitted: (value) {
-                      setState(() => _searchQuery = value);
-                      fetchDownline();
-                    },
-                  ),
-                ),
-                if (_searchQuery.isEmpty)
-                  Padding(
-                    padding: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 4),
-                    child: DropdownButton<JoinWindow>(
-                      isExpanded: true,
-                      value: selectedJoinWindow,
-                      onChanged: (value) {
-                        if (value != null) {
-                          setState(() => selectedJoinWindow = value);
-                          fetchDownline();
-                        }
-                      },
-                      items: JoinWindow.values.map((window) {
-                        return DropdownMenuItem(
-                          value: window,
-                          child: Text(
-                            _dropdownLabel(window),
-                            style: const TextStyle(fontSize: 16),
-                          ),
-                        );
-                      }).toList(),
-                    ),
-                  ),
-                Expanded(
-                  child: ListView(
-                    children: downlineByLevel.entries.map((entry) {
-                      final level = entry.key;
-                      final users = entry.value;
-                      return Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          const Divider(thickness: 1),
-                          Padding(
-                            padding: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 10),
+      body: Column(
+        children: [
+          const AppHeaderWithMenu(),
+          isLoading
+              ? const Expanded(child: Center(child: CircularProgressIndicator()))
+              : Expanded(
+                  child: Column(
+                    children: [
+                      const Padding(
+                          padding: EdgeInsets.only(top: 16.0, bottom: 16.0),
+                          child: Center(
                             child: Text(
-                              'Level $level (${users.length})',
-                              style: const TextStyle(fontSize: 14, fontWeight: FontWeight.bold, color: Colors.blue),
+                              'My Downline',
+                              style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
                             ),
                           ),
-                          ...users.map((user) => Padding(
-                                padding: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 6),
-                                child: Column(
-                                  crossAxisAlignment: CrossAxisAlignment.start,
-                                  children: [
-                                    Row(
-                                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                                      children: [
-                                        Text(
-                                          '${user.firstName ?? ''} ${user.lastName ?? ''}',
-                                          style: const TextStyle(fontWeight: FontWeight.w600),
-                                        ),
-                                        if (_canSendMessage(user))
-                                          TextButton(
-                                            onPressed: () {
-                                              // TODO: Implement send message action
-                                            },
-                                            child: const Text('[Send Message]'),
-                                          ),
-                                      ],
-                                    ),
-                                    Text(
-                                      '${user.city ?? ''}, ${user.state ?? ''} - ${user.country ?? ''}',
-                                      style: const TextStyle(color: Colors.grey),
-                                    ),
-                                    Text(
-                                      '🕒 Joined: ${user.joined != null ? user.joined!.toString().split(" ")[0] : 'Unknown'}',
-                                      style: const TextStyle(fontSize: 13),
-                                    ),
-                                    
-                                  ],
+                        ),
+                        Padding(
+                        padding: const EdgeInsets.fromLTRB(16, 16, 16, 8),
+                        child: TextField(
+                          controller: _searchController,
+                          decoration: InputDecoration(
+                            hintText: 'Search downline...',
+                            prefixIcon: const Icon(Icons.search),
+                            border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
+                          ),
+                          onChanged: (value) {
+                            setState(() => _searchQuery = value);
+                            if (value.trim().isEmpty) fetchDownline();
+                          },
+                          onSubmitted: (value) {
+                            setState(() => _searchQuery = value);
+                            fetchDownline();
+                          },
+                        ),
+                      ),
+                      if (_searchQuery.isEmpty)
+                        Padding(
+                          padding: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 4),
+                          child: DropdownButton<JoinWindow>(
+                            isExpanded: true,
+                            value: selectedJoinWindow,
+                            onChanged: (value) {
+                              if (value != null) {
+                                setState(() => selectedJoinWindow = value);
+                                fetchDownline();
+                              }
+                            },
+                            items: JoinWindow.values.map((window) {
+                              return DropdownMenuItem(
+                                value: window,
+                                child: Text(
+                                  _dropdownLabel(window),
+                                  style: const TextStyle(fontSize: 16),
                                 ),
-                              ))
-                        ],
-                      );
-                    }).toList(),
+                              );
+                            }).toList(),
+                          ),
+                        ),
+                      Expanded(
+                        child: ListView(
+                          children: downlineByLevel.entries.map((entry) {
+                            final level = entry.key;
+                            final users = entry.value;
+                            return Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                const Divider(thickness: 1),
+                                Padding(
+                                  padding: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 10),
+                                  child: Text(
+                                    'Level $level (${users.length})',
+                                    style: const TextStyle(fontSize: 14, fontWeight: FontWeight.bold, color: Colors.blue),
+                                  ),
+                                ),
+                                ...users.map((user) => Padding(
+                                      padding: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 6),
+                                      child: Column(
+                                        crossAxisAlignment: CrossAxisAlignment.start,
+                                        children: [
+                                          Row(
+                                            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                                            children: [
+                                              Text(
+                                                '${user.firstName ?? ''} ${user.lastName ?? ''}',
+                                                style: const TextStyle(fontWeight: FontWeight.w600),
+                                              ),
+                                              if (_canSendMessage(user))
+                                                TextButton(
+                                                  onPressed: () {
+                                                    // TODO: Implement send message action
+                                                  },
+                                                  child: const Text('[Send Message]'),
+                                                ),
+                                            ],
+                                          ),
+                                          Text(
+                                            '${user.city ?? ''}, ${user.state ?? ''} - ${user.country ?? ''}',
+                                            style: const TextStyle(color: Colors.grey),
+                                          ),
+                                          Text(
+                                            '🕒 Joined: ${user.joined != null ? user.joined!.toString().split(" ")[0] : 'Unknown'}',
+                                            style: const TextStyle(fontSize: 13),
+                                          ),
+                                        ],
+                                      ),
+                                    ))
+                              ],
+                            );
+                          }).toList(),
+                        ),
+                      ),
+                    ],
                   ),
                 ),
-              ],
-            ),
+        ],
+      ),
     );
   }
 }

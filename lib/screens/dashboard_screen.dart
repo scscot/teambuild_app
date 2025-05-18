@@ -1,97 +1,82 @@
 // PATCH START: dashboard_screen.dart — corrected referredByUid to referredBy in DownlineTeamScreen
 
 import 'package:flutter/material.dart';
-import 'package:tbp/screens/downline_team_screen.dart';
-import 'package:tbp/screens/profile_screen.dart';
-import 'package:tbp/screens/login_screen.dart';
+import '../screens/downline_team_screen.dart';
+import '../screens/profile_screen.dart';
+import '../screens/login_screen.dart';
+import '../screens/share_screen.dart';
 import '../services/session_manager.dart';
 import '../models/user_model.dart';
+import '../widgets/header_widgets.dart';
 
-class DashboardScreen extends StatefulWidget {
+class DashboardScreen extends StatelessWidget {
   const DashboardScreen({super.key});
-
-  @override
-  State<DashboardScreen> createState() => _DashboardScreenState();
-}
-
-class _DashboardScreenState extends State<DashboardScreen> {
-  UserModel? _user;
-
-  @override
-  void initState() {
-    super.initState();
-    _loadUser();
-  }
-
-  Future<void> _loadUser() async {
-    final currentUser = await SessionManager().getCurrentUser();
-    setState(() {
-      _user = currentUser;
-    });
-  }
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(
-        title: const Text('Dashboard'),
-        actions: [
-          IconButton(
-            icon: const Icon(Icons.logout),
-            onPressed: () async {
-              await SessionManager().clearSession();
-              if (mounted) {
-                Navigator.of(context).pushAndRemoveUntil(
-                  MaterialPageRoute(builder: (_) => const LoginScreen()),
-                  (route) => false,
-                );
-              }
-            },
-          ),
-        ],
-      ),
-      body: _user == null
-          ? const Center(child: CircularProgressIndicator())
-          : Column(
-              mainAxisAlignment: MainAxisAlignment.center,
-              children: [
-                Text(
-                  'Welcome ${_user!.firstName}!',
-                  style: const TextStyle(fontSize: 22, fontWeight: FontWeight.bold),
+      appBar: AppHeaderWithMenu(),
+      body: Column(
+        crossAxisAlignment: CrossAxisAlignment.center,
+        children: [
+            const Padding(
+              padding: EdgeInsets.only(top: 24.0),
+              child: Center(
+                child: Text(
+                  'Dashboard',
+                  style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
                 ),
-                const SizedBox(height: 30),
-                Center(
-                  child: SizedBox(
-                    width: 250,
-                    child: ElevatedButton.icon(
-                      onPressed: () => Navigator.push(
-                        context,
-                        MaterialPageRoute(builder: (_) => const ProfileScreen()),
-                      ),
-                      icon: const Icon(Icons.person),
-                      label: const Text('View My Profile'),
-                    ),
-                  ),
-                ),
-                const SizedBox(height: 20),
-                Center(
-                  child: SizedBox(
-                    width: 250,
-                    child: ElevatedButton.icon(
-                      onPressed: () => Navigator.push(
-                        context,
-                        MaterialPageRoute(
-                          builder: (_) => DownlineTeamScreen(referredBy: _user!.uid),
-                        ),
-                      ),
-                      icon: const Icon(Icons.group),
-                      label: const Text('View My Downline'),
-                    ),
-                  ),
-                ),
-              ],
+              ),
             ),
+            const SizedBox(height: 32),
+            SizedBox(
+              width: double.infinity,
+              child: ElevatedButton.icon(
+                icon: const Icon(Icons.person),
+                label: const Text('My Profile'),
+                onPressed: () {
+                  Navigator.push(
+                    context,
+                    MaterialPageRoute(builder: (_) => const ProfileScreen()),
+                  );
+                },
+              ),
+            ),
+            const SizedBox(height: 16),
+            SizedBox(
+              width: double.infinity,
+              child: ElevatedButton.icon(
+                icon: const Icon(Icons.group),
+                label: const Text('My Downline'),
+                onPressed: () {
+                  Navigator.push(
+                    context,
+                    MaterialPageRoute(
+                      builder: (_) => const DownlineTeamScreen(referredBy: 'demo-user'),
+                    ),
+                  );
+                },
+              ),
+            ),
+            const SizedBox(height: 16),
+            SizedBox(
+              width: double.infinity,
+              child: ElevatedButton.icon(
+                icon: const Icon(Icons.ios_share),
+                label: const Text('Share App'),
+                onPressed: () {
+                  Navigator.push(
+                    context,
+                    MaterialPageRoute(builder: (_) => ShareScreen()),
+                  );
+                },
+              ),
+            ),
+          ],
+
+      ),
     );
   }
 }
+
 // PATCH END
