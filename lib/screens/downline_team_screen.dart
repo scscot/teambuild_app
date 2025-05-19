@@ -237,7 +237,10 @@ class _DownlineTeamScreenState extends State<DownlineTeamScreen> {
                       items: JoinWindow.values.map((window) {
                         return DropdownMenuItem(
                           value: window,
-                          child: Text(_dropdownLabel(window)),
+                          child: Text(
+                            _dropdownLabel(window),
+                            style: const TextStyle(fontSize: 16),
+                          ),
                         );
                       }).toList(),
                     ),
