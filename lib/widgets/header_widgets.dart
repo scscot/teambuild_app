@@ -16,15 +16,16 @@ class AppHeaderWithMenu extends StatelessWidget implements PreferredSizeWidget {
   @override
   Widget build(BuildContext context) {
     return AppBar(
+      backgroundColor: const Color(0xFFEDE7F6), // Soft lavender tone
       automaticallyImplyLeading: false,
       title: const Text(
         'TeamBuild Pro',
-        style: TextStyle(fontWeight: FontWeight.bold),
+        style: TextStyle(fontWeight: FontWeight.bold, color: Colors.black),
       ),
       centerTitle: true,
       actions: [
         PopupMenuButton<String>(
-          icon: const Icon(Icons.menu),
+          icon: const Icon(Icons.menu, color: Colors.black),
           onSelected: (String value) async {
             switch (value) {
               case 'dashboard':
@@ -68,11 +69,11 @@ class AppHeaderWithMenu extends StatelessWidget implements PreferredSizeWidget {
             ),
             const PopupMenuItem<String>(
               value: 'profile',
-              child: Text('My Profile'),
+              child: Text('Profile'),
             ),
             const PopupMenuItem<String>(
               value: 'downline',
-              child: Text('My Downline'),
+              child: Text('Downline'),
             ),
             const PopupMenuItem<String>(
               value: 'share',
@@ -98,15 +99,16 @@ class AppHeaderWithBack extends StatelessWidget implements PreferredSizeWidget {
   @override
   Widget build(BuildContext context) {
     return AppBar(
+      backgroundColor: const Color(0xFFEDE7F6), // Soft lavender tone
       leading: IconButton(
-        icon: const Icon(Icons.arrow_back),
+        icon: const Icon(Icons.arrow_back, color: Colors.black),
         onPressed: () {
           Navigator.pop(context);
         },
       ),
       title: const Text(
         'TeamBuild Pro',
-        style: TextStyle(fontWeight: FontWeight.bold),
+        style: TextStyle(fontWeight: FontWeight.bold, color: Colors.black),
       ),
       centerTitle: true,
     );

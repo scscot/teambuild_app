@@ -75,6 +75,7 @@ class _MemberDetailScreenState extends State<MemberDetailScreen> {
                         ? DateFormat.yMMMMd().format(_user!.createdAt!)
                         : 'N/A',
                   ),
+                  // _buildInfoRow('Level', _user!.level ?? 'N/A'),
                   if (_sponsorName != null && _sponsorName!.isNotEmpty)
                     _buildInfoRow('Sponsor Name', _sponsorName!),
                   const SizedBox(height: 30),

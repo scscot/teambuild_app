@@ -1,5 +1,3 @@
-// FINAL PATCHED: dashboard_screen.dart — Logout icon in AppBar
-
 import 'package:flutter/material.dart';
 import '../services/session_manager.dart';
 import '../services/auth_service.dart';
