@@ -7,6 +7,8 @@ import '../models/user_model.dart';
 import '../services/session_manager.dart';
 import 'login_screen.dart';
 import '../widgets/header_widgets.dart';
+import 'member_detail_screen.dart';
+
 
 enum JoinWindow {
   all,
@@ -265,9 +267,23 @@ class _DownlineTeamScreenState extends State<DownlineTeamScreen> {
                                           Row(
                                             mainAxisAlignment: MainAxisAlignment.spaceBetween,
                                             children: [
-                                              Text(
-                                                '${user.firstName ?? ''} ${user.lastName ?? ''}',
-                                                style: const TextStyle(fontWeight: FontWeight.w600),
+                                              GestureDetector(
+                                                onTap: () {
+                                                  Navigator.push(
+                                                    context,
+                                                    MaterialPageRoute(
+                                                      builder: (_) => MemberDetailScreen(userId: user.uid),
+                                                    ),
+                                                  );
+                                                },
+                                                child: Text(
+                                                  '${user.firstName ?? ''} ${user.lastName ?? ''}',
+                                                  style: const TextStyle(
+                                                    color: Colors.blue,
+                                                    decoration: TextDecoration.underline,
+                                                    fontWeight: FontWeight.w600,
+                                                  ),
+                                                ),
                                               ),
                                               if (_canSendMessage(user))
                                                 TextButton(
