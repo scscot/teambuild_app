@@ -1,14 +1,12 @@
-// CLEAN GENERATED — member_detail_screen.dart from profile_screen.dart template
-
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
-import 'package:firebase_auth/firebase_auth.dart';
-import '../models/user_model.dart';
-import '../services/session_manager.dart';
+import '../widgets/header_widgets.dart';
 import '../services/firestore_service.dart';
+import '../models/user_model.dart';
 
 class MemberDetailScreen extends StatefulWidget {
   final String userId;
+
   const MemberDetailScreen({super.key, required this.userId});
 
   @override
@@ -22,10 +20,10 @@ class _MemberDetailScreenState extends State<MemberDetailScreen> {
   @override
   void initState() {
     super.initState();
-    _loadMemberData();
+    _loadUserData();
   }
 
-  Future<void> _loadMemberData() async {
+  Future<void> _loadUserData() async {
     try {
       final user = await FirestoreService().getUser(widget.userId);
       if (user != null) {
@@ -36,19 +34,15 @@ class _MemberDetailScreenState extends State<MemberDetailScreen> {
           if (mounted) setState(() => _sponsorName = sponsorName);
         }
       }
-
     } catch (e) {
-      print('❌ Failed to load member details: $e');
+      debugPrint('❌ Failed to load member: $e');
     }
   }
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(
-        title: const Text('Member Details'),
-        automaticallyImplyLeading: true,
-      ),
+      appBar: const AppHeaderWithBack(),
       body: _user == null
           ? const Center(child: CircularProgressIndicator())
           : SingleChildScrollView(
@@ -71,17 +65,16 @@ class _MemberDetailScreenState extends State<MemberDetailScreen> {
                   _buildInfoRow('Country', _user!.country ?? 'N/A'),
                   _buildInfoRow(
                     'Join Date',
-                    _user!.createdAt != null
-                        ? DateFormat.yMMMMd().format(_user!.createdAt!)
-                        : 'N/A',
+                    _user!.createdAt != null ? DateFormat.yMMMMd().format(_user!.createdAt!) : 'N/A',
                   ),
-                  // _buildInfoRow('Level', _user!.level ?? 'N/A'),
                   if (_sponsorName != null && _sponsorName!.isNotEmpty)
                     _buildInfoRow('Sponsor Name', _sponsorName!),
                   const SizedBox(height: 30),
                   Center(
                     child: ElevatedButton.icon(
-                      onPressed: () {},
+                      onPressed: () {
+                        // TODO: implement messaging action
+                      },
                       icon: const Icon(Icons.message),
                       label: const Text('Send Message'),
                       style: ElevatedButton.styleFrom(
@@ -112,7 +105,9 @@ class _MemberDetailScreenState extends State<MemberDetailScreen> {
               style: const TextStyle(fontWeight: FontWeight.w600),
             ),
           ),
-          Expanded(child: Text(value)),
+          Expanded(
+            child: Text(value),
+          ),
         ],
       ),
     );
