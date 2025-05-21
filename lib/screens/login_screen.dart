@@ -126,6 +126,29 @@ class _LoginScreenState extends State<LoginScreen> {
                     ? const CircularProgressIndicator(color: Colors.white)
                     : const Text('Login'),
               ),
+              const SizedBox(height: 12),
+              TextButton(
+                onPressed: () async {
+                  final email = _emailController.text.trim();
+                  if (email.isEmpty) {
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      const SnackBar(content: Text('Please enter your email first.')),
+                    );
+                    return;
+                  }
+                  try {
+                    await FirebaseAuth.instance.sendPasswordResetEmail(email: email);
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      const SnackBar(content: Text('Password reset email sent.')),
+                    );
+                  } catch (e) {
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      SnackBar(content: Text('Failed to send reset email: $e')),
+                    );
+                  }
+                },
+                child: const Text('Forgot Password?'),
+              ),
               const SizedBox(height: 16),
               TextButton(
                 onPressed: () {
