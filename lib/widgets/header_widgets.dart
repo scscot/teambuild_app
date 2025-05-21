@@ -15,6 +15,8 @@ class AppHeaderWithMenu extends StatelessWidget implements PreferredSizeWidget {
 
   @override
   Widget build(BuildContext context) {
+    final isLoginScreen = context.findAncestorWidgetOfExactType<LoginScreen>() != null;
+
     return AppBar(
       backgroundColor: const Color(0xFFEDE7F6), // Soft lavender tone
       automaticallyImplyLeading: false,
@@ -23,69 +25,71 @@ class AppHeaderWithMenu extends StatelessWidget implements PreferredSizeWidget {
         style: TextStyle(fontWeight: FontWeight.bold, color: Colors.black),
       ),
       centerTitle: true,
-      actions: [
-        PopupMenuButton<String>(
-          icon: const Icon(Icons.menu, color: Colors.black),
-          onSelected: (String value) async {
-            switch (value) {
-              case 'dashboard':
-                Navigator.push(
-                  context,
-                  MaterialPageRoute(builder: (_) => const DashboardScreen()),
-                );
-                break;
-              case 'profile':
-                Navigator.push(
-                  context,
-                  MaterialPageRoute(builder: (_) => const ProfileScreen()),
-                );
-                break;
-              case 'downline':
-                Navigator.push(
-                  context,
-                  MaterialPageRoute(builder: (_) => const DownlineTeamScreen(referredBy: 'demo-user')),
-                );
-                break;
-              case 'share':
-                Navigator.push(
-                  context,
-                  MaterialPageRoute(builder: (_) => ShareScreen()),
-                );
-                break;
-              case 'logout':
-                await SessionManager().clearSession();
-                await FirebaseAuth.instance.signOut();
-                Navigator.of(context).pushAndRemoveUntil(
-                  MaterialPageRoute(builder: (_) => const LoginScreen()),
-                  (route) => false,
-                );
-                break;
-            }
-          },
-          itemBuilder: (BuildContext context) => [
-            const PopupMenuItem<String>(
-              value: 'dashboard',
-              child: Text('Dashboard'),
-            ),
-            const PopupMenuItem<String>(
-              value: 'profile',
-              child: Text('Profile'),
-            ),
-            const PopupMenuItem<String>(
-              value: 'downline',
-              child: Text('Downline'),
-            ),
-            const PopupMenuItem<String>(
-              value: 'share',
-              child: Text('Share'),
-            ),
-            const PopupMenuItem<String>(
-              value: 'logout',
-              child: Text('Logout'),
-            ),
-          ],
-        ),
-      ],
+      actions: isLoginScreen
+          ? null
+          : [
+              PopupMenuButton<String>(
+                icon: const Icon(Icons.menu, color: Colors.black),
+                onSelected: (String value) async {
+                  switch (value) {
+                    case 'dashboard':
+                      Navigator.push(
+                        context,
+                        MaterialPageRoute(builder: (_) => const DashboardScreen()),
+                      );
+                      break;
+                    case 'profile':
+                      Navigator.push(
+                        context,
+                        MaterialPageRoute(builder: (_) => const ProfileScreen()),
+                      );
+                      break;
+                    case 'downline':
+                      Navigator.push(
+                        context,
+                        MaterialPageRoute(builder: (_) => const DownlineTeamScreen(referredBy: 'demo-user')),
+                      );
+                      break;
+                    case 'share':
+                      Navigator.push(
+                        context,
+                        MaterialPageRoute(builder: (_) => ShareScreen()),
+                      );
+                      break;
+                    case 'logout':
+                      await SessionManager().clearSession();
+                      await FirebaseAuth.instance.signOut();
+                      Navigator.of(context).pushAndRemoveUntil(
+                        MaterialPageRoute(builder: (_) => const LoginScreen()),
+                        (route) => false,
+                      );
+                      break;
+                  }
+                },
+                itemBuilder: (BuildContext context) => [
+                  const PopupMenuItem<String>(
+                    value: 'dashboard',
+                    child: Text('Dashboard'),
+                  ),
+                  const PopupMenuItem<String>(
+                    value: 'profile',
+                    child: Text('Profile'),
+                  ),
+                  const PopupMenuItem<String>(
+                    value: 'downline',
+                    child: Text('Downline'),
+                  ),
+                  const PopupMenuItem<String>(
+                    value: 'share',
+                    child: Text('Share'),
+                  ),
+                  const PopupMenuItem<String>(
+                    value: 'logout',
+                    child: Text('Logout'),
+                  ),
+                ],
+              )
+            ],
     );
   }
 }

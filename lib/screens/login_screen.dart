@@ -9,6 +9,8 @@ import '../services/session_manager.dart';
 import '../models/user_model.dart';
 import 'dashboard_screen.dart';
 import 'new_registration_screen.dart';
+import '../widgets/header_widgets.dart';
+
 
 class LoginScreen extends StatefulWidget {
   const LoginScreen({super.key});
@@ -98,7 +100,7 @@ class _LoginScreenState extends State<LoginScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(title: const Text('Login')),
+      appBar: const AppHeaderWithMenu(),
       body: Padding(
         padding: const EdgeInsets.all(16.0),
         child: Form(
