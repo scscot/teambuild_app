@@ -1,4 +1,4 @@
-// CLEAN PATCHED — downline_team_screen.dart with Level Reset and Member Links
+// CLEAN PATCHED — downline_team_screen.dart with placeholder spacing logic
 
 import 'package:flutter/material.dart';
 import 'dart:async';
@@ -6,9 +6,8 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import '../models/user_model.dart';
 import '../services/session_manager.dart';
-import 'login_screen.dart';
-import 'member_detail_screen.dart';
-import '../widgets/header_widgets.dart'; // PATCH: AppHeaderWithMenu added
+import '../screens/member_detail_screen.dart';
+import '../widgets/header_widgets.dart';
 
 enum JoinWindow {
   all,
@@ -33,6 +32,7 @@ class _DownlineTeamScreenState extends State<DownlineTeamScreen> {
   final TextEditingController _searchController = TextEditingController();
   String _searchQuery = '';
   Timer? _debounce;
+  int levelOffset = 0;
 
   @override
   void initState() {
@@ -88,10 +88,12 @@ class _DownlineTeamScreenState extends State<DownlineTeamScreen> {
         );
       }).toList();
 
-      final currentRefCode = allUsers.firstWhere(
+      final currentUserModel = allUsers.firstWhere(
         (u) => u.uid == currentUser?.uid,
         orElse: () => UserModel(uid: '', email: ''),
-      ).referralCode;
+      );
+
+      final currentRefCode = currentUserModel.referralCode;
 
       if (currentRefCode == null || currentRefCode.isEmpty) {
         debugPrint('⚠️ Current user referralCode is null or empty');
@@ -99,7 +101,9 @@ class _DownlineTeamScreenState extends State<DownlineTeamScreen> {
         return;
       }
 
-      final Set<String> visited = {}; // to avoid circular refs
+      levelOffset = currentUserModel.level != null ? currentUserModel.level! : 0;
+
+      final Set<String> visited = {};
       final Map<int, List<UserModel>> grouped = {};
 
       void collectDownline(String refCode) {
@@ -174,13 +178,6 @@ class _DownlineTeamScreenState extends State<DownlineTeamScreen> {
     }
   }
 
-  bool _canSendMessage(UserModel user) {
-    if (currentUser == null) return false;
-    final isAdmin = widget.referredBy.isEmpty;
-    final isDirect = user.referredBy == widget.referredBy;
-    return isAdmin || isDirect;
-  }
-
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -242,22 +239,26 @@ class _DownlineTeamScreenState extends State<DownlineTeamScreen> {
                   ),
                 Expanded(
                   child: ListView(
-                    children: downlineByLevel.entries.map((entry) {
-                      final level = entry.key;
-                      final users = entry.value;
-                      int globalIndex = 1;
-                      return Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          const Divider(thickness: 1),
-                          Padding(
-                            padding: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 10),
-                            child: Text(
-                              'Level $level (${users.length})',
-                              style: const TextStyle(fontSize: 14, fontWeight: FontWeight.bold, color: Colors.blue),
+                    children: [
+                      ...downlineByLevel.entries.map((entry) {
+                        final adjustedLevel = entry.key - levelOffset;
+                        final users = entry.value;
+                        int localIndex = 1;
+                        return Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            const Divider(thickness: 1),
+                            Padding(
+                              padding: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 10),
+                              child: Text(
+                                'Level $adjustedLevel (${users.length})',
+                                style: const TextStyle(fontSize: 14, fontWeight: FontWeight.bold, color: Colors.blue),
+                              ),
                             ),
-                          ),
-                          ...users.map((user) => Padding(
+                            ...users.map((user) {
+                              final index = localIndex++;
+                              final spaceCount = index < 10 ? 4 : index < 100 ? 6 : 7;
+                              return Padding(
                                 padding: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 8),
                                 child: Column(
                                   crossAxisAlignment: CrossAxisAlignment.start,
@@ -265,7 +266,7 @@ class _DownlineTeamScreenState extends State<DownlineTeamScreen> {
                                     Row(
                                       children: [
                                         Text(
-                                          "${globalIndex++}) ",
+                                          '$index) ',
                                           style: const TextStyle(fontWeight: FontWeight.normal),
                                         ),
                                         GestureDetector(
@@ -278,30 +279,28 @@ class _DownlineTeamScreenState extends State<DownlineTeamScreen> {
                                             );
                                           },
                                           child: Text(
-                                            "${user.firstName ?? ""} ${user.lastName ?? ""}",
-                                            style: const TextStyle(
-                                              color: Colors.blue,
-                                              decoration: TextDecoration.underline,
-                                            ),
+                                            '${user.firstName ?? ''} ${user.lastName ?? ''}',
+                                            style: const TextStyle(color: Colors.blue, decoration: TextDecoration.underline),
                                           ),
                                         ),
                                       ],
                                     ),
                                     Text(
-                                      "\ \ \ \ ${user.city ?? ""}, ${user.state ?? ""} – ${user.country ?? ""}",
+                                      '${' ' * spaceCount}${user.city ?? ''}, ${user.state ?? ''} – ${user.country ?? ''}',
                                       style: const TextStyle(fontWeight: FontWeight.normal),
                                     ),
                                   ],
                                 ),
-                              ))
-                        ],
-                      );
-                    }).toList(),
+                              );
+                            })
+                          ],
+                        );
+                      }).toList(),
+                    ],
                   ),
                 ),
               ],
             ),
     );
   }
-}
-// PATCH END
+} // PATCH END
