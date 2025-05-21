@@ -1,1 +1,0 @@
-// Chat bubble UI widget
