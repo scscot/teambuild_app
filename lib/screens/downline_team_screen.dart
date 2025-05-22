@@ -1,4 +1,4 @@
-// CLEAN PATCHED — downline_team_screen.dart with placeholder spacing logic
+// PATCHED — downline_team_screen.dart with accurate dropdown count and filtering fix
 
 import 'package:flutter/material.dart';
 import 'dart:async';
@@ -10,6 +10,7 @@ import '../screens/member_detail_screen.dart';
 import '../widgets/header_widgets.dart';
 
 enum JoinWindow {
+  none,
   all,
   last24,
   last7,
@@ -26,13 +27,20 @@ class DownlineTeamScreen extends StatefulWidget {
 
 class _DownlineTeamScreenState extends State<DownlineTeamScreen> {
   bool isLoading = true;
-  JoinWindow selectedJoinWindow = JoinWindow.all;
+  JoinWindow selectedJoinWindow = JoinWindow.none;
   Map<int, List<UserModel>> downlineByLevel = {};
   final currentUser = FirebaseAuth.instance.currentUser;
   final TextEditingController _searchController = TextEditingController();
   String _searchQuery = '';
   Timer? _debounce;
   int levelOffset = 0;
+  List<UserModel> allUsers = [];
+  Map<JoinWindow, int> downlineCounts = {
+    JoinWindow.all: 0,
+    JoinWindow.last24: 0,
+    JoinWindow.last7: 0,
+    JoinWindow.last30: 0,
+  };
 
   @override
   void initState() {
@@ -69,7 +77,7 @@ class _DownlineTeamScreenState extends State<DownlineTeamScreen> {
     setState(() => isLoading = true);
     try {
       final snapshot = await FirebaseFirestore.instance.collection('users').get();
-      final allUsers = snapshot.docs.map((doc) {
+      allUsers = snapshot.docs.map((doc) {
         final data = doc.data();
         return UserModel(
           uid: doc.id,
@@ -101,54 +109,51 @@ class _DownlineTeamScreenState extends State<DownlineTeamScreen> {
         return;
       }
 
-      levelOffset = currentUserModel.level != null ? currentUserModel.level! : 0;
+      levelOffset = currentUserModel.level ?? 0;
+      final now = DateTime.now();
 
+      downlineCounts.updateAll((_, __) => 0);
       final Set<String> visited = {};
       final Map<int, List<UserModel>> grouped = {};
 
-      void collectDownline(String refCode) {
+      void collect(String refCode) {
         final direct = allUsers.where((u) => u.referredBy == refCode).toList();
-        final now = DateTime.now();
-
-        Duration? filterDuration;
-        if (_searchQuery.isEmpty) {
-          switch (selectedJoinWindow) {
-            case JoinWindow.last24:
-              filterDuration = const Duration(hours: 24);
-              break;
-            case JoinWindow.last7:
-              filterDuration = const Duration(days: 7);
-              break;
-            case JoinWindow.last30:
-              filterDuration = const Duration(days: 30);
-              break;
-            case JoinWindow.all:
-            default:
-              filterDuration = null;
-          }
-        }
-
         for (var user in direct) {
+          final joined = user.joined;
           if (user.level != null) {
-            final joined = user.joined;
-            if (filterDuration != null && joined != null) {
-              final cutoff = now.subtract(filterDuration);
-              if (joined.isBefore(cutoff)) continue;
+            if (joined != null) {
+              final joinedDate = joined;
+              if (joinedDate.isAfter(now.subtract(const Duration(days: 1)))) {
+                downlineCounts[JoinWindow.last24] = downlineCounts[JoinWindow.last24]! + 1;
+              }
+              if (joinedDate.isAfter(now.subtract(const Duration(days: 7)))) {
+                downlineCounts[JoinWindow.last7] = downlineCounts[JoinWindow.last7]! + 1;
+              }
+              if (joinedDate.isAfter(now.subtract(const Duration(days: 30)))) {
+                downlineCounts[JoinWindow.last30] = downlineCounts[JoinWindow.last30]! + 1;
+              }
             }
+            downlineCounts[JoinWindow.all] = downlineCounts[JoinWindow.all]! + 1;
 
+            if (selectedJoinWindow == JoinWindow.none ||
+                selectedJoinWindow == JoinWindow.all ||
+                (selectedJoinWindow == JoinWindow.last24 && joined != null && joined.isAfter(now.subtract(const Duration(days: 1)))) ||
+                (selectedJoinWindow == JoinWindow.last7 && joined != null && joined.isAfter(now.subtract(const Duration(days: 7)))) ||
+                (selectedJoinWindow == JoinWindow.last30 && joined != null && joined.isAfter(now.subtract(const Duration(days: 30))))) {
+
+              if (_searchQuery.isEmpty || userMatchesSearch(user)) {
+                grouped.putIfAbsent(user.level!, () => []).add(user);
+              }
+            }
             if (!visited.contains(user.referralCode)) {
               visited.add(user.referralCode ?? '');
-              collectDownline(user.referralCode ?? '');
+              collect(user.referralCode ?? '');
             }
-
-            if (_searchQuery.isNotEmpty && !userMatchesSearch(user)) continue;
-
-            grouped.putIfAbsent(user.level!, () => []).add(user);
           }
         }
       }
 
-      collectDownline(currentRefCode);
+      collect(currentRefCode);
 
       grouped.forEach((level, users) {
         users.sort((a, b) => b.joined?.compareTo(a.joined ?? DateTime(1970)) ?? 0);
@@ -167,14 +172,16 @@ class _DownlineTeamScreenState extends State<DownlineTeamScreen> {
   String _dropdownLabel(JoinWindow window) {
     switch (window) {
       case JoinWindow.last24:
-        return 'Joined Previous 24 Hours';
+        return 'Joined Previous 24 Hours (${downlineCounts[JoinWindow.last24]})';
       case JoinWindow.last7:
-        return 'Joined Previous 7 Days';
+        return 'Joined Previous 7 Days (${downlineCounts[JoinWindow.last7]})';
       case JoinWindow.last30:
-        return 'Joined Previous 30 Days';
+        return 'Joined Previous 30 Days (${downlineCounts[JoinWindow.last30]})';
       case JoinWindow.all:
+        return 'All Team Members (${downlineCounts[JoinWindow.all]})';
+      case JoinWindow.none:
       default:
-        return 'My Downline Team';
+        return 'Select Downline Report';
     }
   }
 
@@ -197,110 +204,117 @@ class _DownlineTeamScreenState extends State<DownlineTeamScreen> {
                 ),
                 Padding(
                   padding: const EdgeInsets.fromLTRB(16, 16, 16, 8),
-                  child: TextField(
-                    controller: _searchController,
-                    decoration: InputDecoration(
-                      hintText: 'Search downline...',
-                      prefixIcon: const Icon(Icons.search),
-                      border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
-                    ),
+                  child: DropdownButton<JoinWindow>(
+                    isExpanded: true,
+                    value: selectedJoinWindow,
                     onChanged: (value) {
-                      setState(() => _searchQuery = value);
-                      if (value.trim().isEmpty) fetchDownline();
+                      if (value != null) {
+                        setState(() {
+                          selectedJoinWindow = value;
+                          _searchQuery = '';
+                        });
+                        fetchDownline();
+                      }
                     },
-                    onSubmitted: (value) {
-                      setState(() => _searchQuery = value);
-                      fetchDownline();
-                    },
+                    items: [
+                      JoinWindow.none,
+                      JoinWindow.all,
+                      JoinWindow.last24,
+                      JoinWindow.last7,
+                      JoinWindow.last30
+                    ].map((window) {
+                      return DropdownMenuItem(
+                        value: window,
+                        child: Text(_dropdownLabel(window)),
+                      );
+                    }).toList(),
                   ),
                 ),
-                if (_searchQuery.isEmpty)
+                if (selectedJoinWindow != JoinWindow.none)
                   Padding(
-                    padding: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 4),
-                    child: DropdownButton<JoinWindow>(
-                      isExpanded: true,
-                      value: selectedJoinWindow,
+                    padding: const EdgeInsets.fromLTRB(16, 8, 16, 8),
+                    child: TextField(
+                      controller: _searchController,
+                      decoration: InputDecoration(
+                        hintText: 'Search downline...',
+                        prefixIcon: const Icon(Icons.search),
+                        border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
+                      ),
                       onChanged: (value) {
-                        if (value != null) {
-                          setState(() => selectedJoinWindow = value);
-                          fetchDownline();
-                        }
+                        setState(() => _searchQuery = value);
+                        if (value.trim().isEmpty) fetchDownline();
                       },
-                      items: JoinWindow.values.map((window) {
-                        return DropdownMenuItem(
-                          value: window,
-                          child: Text(
-                            _dropdownLabel(window),
-                            style: const TextStyle(fontSize: 16),
-                          ),
-                        );
-                      }).toList(),
+                      onSubmitted: (value) {
+                        setState(() => _searchQuery = value);
+                        fetchDownline();
+                      },
                     ),
                   ),
-                Expanded(
-                  child: ListView(
-                    children: [
-                      ...downlineByLevel.entries.map((entry) {
-                        final adjustedLevel = entry.key - levelOffset;
-                        final users = entry.value;
-                        int localIndex = 1;
-                        return Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            const Divider(thickness: 1),
-                            Padding(
-                              padding: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 10),
-                              child: Text(
-                                'Level $adjustedLevel (${users.length})',
-                                style: const TextStyle(fontSize: 14, fontWeight: FontWeight.bold, color: Colors.blue),
-                              ),
-                            ),
-                            ...users.map((user) {
-                              final index = localIndex++;
-                              final spaceCount = index < 10 ? 4 : index < 100 ? 6 : 7;
-                              return Padding(
-                                padding: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 8),
-                                child: Column(
-                                  crossAxisAlignment: CrossAxisAlignment.start,
-                                  children: [
-                                    Row(
-                                      children: [
-                                        Text(
-                                          '$index) ',
-                                          style: const TextStyle(fontWeight: FontWeight.normal),
-                                        ),
-                                        GestureDetector(
-                                          onTap: () {
-                                            Navigator.push(
-                                              context,
-                                              MaterialPageRoute(
-                                                builder: (_) => MemberDetailScreen(userId: user.uid),
-                                              ),
-                                            );
-                                          },
-                                          child: Text(
-                                            '${user.firstName ?? ''} ${user.lastName ?? ''}',
-                                            style: const TextStyle(color: Colors.blue, decoration: TextDecoration.underline),
-                                          ),
-                                        ),
-                                      ],
-                                    ),
-                                    Text(
-                                      '${' ' * spaceCount}${user.city ?? ''}, ${user.state ?? ''} – ${user.country ?? ''}',
-                                      style: const TextStyle(fontWeight: FontWeight.normal),
-                                    ),
-                                  ],
+                if (selectedJoinWindow != JoinWindow.none)
+                  Expanded(
+                    child: ListView(
+                      children: [
+                        ...downlineByLevel.entries.map((entry) {
+                          final adjustedLevel = entry.key - levelOffset;
+                          final users = entry.value;
+                          int localIndex = 1;
+                          return Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              const Divider(thickness: 1),
+                              Padding(
+                                padding: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 10),
+                                child: Text(
+                                  'Level $adjustedLevel (${users.length})',
+                                  style: const TextStyle(fontSize: 14, fontWeight: FontWeight.bold, color: Colors.blue),
                                 ),
-                              );
-                            })
-                          ],
-                        );
-                      }).toList(),
-                    ],
+                              ),
+                              ...users.map((user) {
+                                final index = localIndex++;
+                                final spaceCount = index < 10 ? 4 : index < 100 ? 6 : 7;
+                                return Padding(
+                                  padding: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 8),
+                                  child: Column(
+                                    crossAxisAlignment: CrossAxisAlignment.start,
+                                    children: [
+                                      Row(
+                                        children: [
+                                          Text(
+                                            '$index) ',
+                                            style: const TextStyle(fontWeight: FontWeight.normal),
+                                          ),
+                                          GestureDetector(
+                                            onTap: () {
+                                              Navigator.push(
+                                                context,
+                                                MaterialPageRoute(
+                                                  builder: (_) => MemberDetailScreen(userId: user.uid),
+                                                ),
+                                              );
+                                            },
+                                            child: Text(
+                                              '${user.firstName ?? ''} ${user.lastName ?? ''}',
+                                              style: const TextStyle(color: Colors.blue, decoration: TextDecoration.underline),
+                                            ),
+                                          ),
+                                        ],
+                                      ),
+                                      Text(
+                                        '${' ' * spaceCount}${user.city ?? ''}, ${user.state ?? ''} – ${user.country ?? ''}',
+                                        style: const TextStyle(fontWeight: FontWeight.normal),
+                                      ),
+                                    ],
+                                  ),
+                                );
+                              })
+                            ],
+                          );
+                        }).toList(),
+                      ],
+                    ),
                   ),
-                ),
               ],
             ),
     );
   }
-} // PATCH END
+}
