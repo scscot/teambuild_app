@@ -1,4 +1,5 @@
-// PATCH START: add 'level' field to UserModel
+// FINAL PATCHED — user_model.dart with city, sponsor counts, and admin flag
+
 import 'package:cloud_firestore/cloud_firestore.dart';
 
 class UserModel {
@@ -15,6 +16,9 @@ class UserModel {
   final DateTime? createdAt;
   final DateTime? joined;
   final int? level;
+  final int? directSponsorCount;
+  final int? totalTeamCount;
+  final bool? isAdmin;
 
   UserModel({
     required this.uid,
@@ -30,6 +34,9 @@ class UserModel {
     this.createdAt,
     this.joined,
     this.level,
+    this.directSponsorCount,
+    this.totalTeamCount,
+    this.isAdmin,
   });
 
   Map<String, dynamic> toMap() {
@@ -47,6 +54,9 @@ class UserModel {
       'createdAt': createdAt?.toIso8601String(),
       'joined': joined?.toIso8601String(),
       'level': level,
+      'directSponsorCount': directSponsorCount,
+      'totalTeamCount': totalTeamCount,
+      'isAdmin': isAdmin,
     };
   }
 
@@ -65,6 +75,9 @@ class UserModel {
       createdAt: _parseTimestamp(map['createdAt']),
       joined: _parseTimestamp(map['joined']),
       level: map['level'],
+      directSponsorCount: map['directSponsorCount'],
+      totalTeamCount: map['totalTeamCount'],
+      isAdmin: map['isAdmin'],
     );
   }
 
@@ -94,6 +107,9 @@ class UserModel {
     DateTime? createdAt,
     DateTime? joined,
     int? level,
+    int? directSponsorCount,
+    int? totalTeamCount,
+    bool? isAdmin,
   }) {
     return UserModel(
       uid: uid ?? this.uid,
@@ -109,7 +125,9 @@ class UserModel {
       createdAt: createdAt ?? this.createdAt,
       joined: joined ?? this.joined,
       level: level ?? this.level,
+      directSponsorCount: directSponsorCount ?? this.directSponsorCount,
+      totalTeamCount: totalTeamCount ?? this.totalTeamCount,
+      isAdmin: isAdmin ?? this.isAdmin,
     );
   }
 }
-// PATCH END

@@ -93,3 +93,4 @@ scripts/pubspec.lock
 ios/Runner 2.xcworkspace/xcshareddata/WorkspaceSettings.xcsettings
 ios/Runner 2.xcworkspace/xcshareddata/IDEWorkspaceChecks.plist
 ios/Runner 2.xcworkspace/contents.xcworkspacedata
+secrets/

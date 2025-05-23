@@ -1,4 +1,5 @@
-// PATCH START: explicitly import global constant 'statesByCountry' from states_by_country.dart
+// PATCHED — new_registration_screen.dart (referral code auto-detect + sponsor display + city field)
+
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 import 'package:uuid/uuid.dart';
@@ -10,7 +11,8 @@ import '../data/states_by_country.dart';
 import 'dashboard_screen.dart';
 
 class NewRegistrationScreen extends StatefulWidget {
-  const NewRegistrationScreen({super.key});
+  final String? referralCode;
+  const NewRegistrationScreen({super.key, this.referralCode});
 
   @override
   State<NewRegistrationScreen> createState() => _NewRegistrationScreenState();
@@ -23,14 +25,41 @@ class _NewRegistrationScreenState extends State<NewRegistrationScreen> {
   final TextEditingController _emailController = TextEditingController();
   final TextEditingController _passwordController = TextEditingController();
   final TextEditingController _confirmPasswordController = TextEditingController();
-  final TextEditingController _referralCodeController = TextEditingController();
+  final TextEditingController _cityController = TextEditingController();
 
   String? _selectedCountry;
   String? _selectedState;
   String? _sponsorName;
+  String? _referredBy;
   bool _isLoading = false;
+  bool _isAdmin = false;
 
   List<String> get states => statesByCountry[_selectedCountry] ?? [];
+
+  @override
+  void initState() {
+    super.initState();
+    _initReferral();
+  }
+
+  Future<void> _initReferral() async {
+    final code = widget.referralCode;
+    if (code == null || code.isEmpty) {
+      setState(() => _isAdmin = true);
+      return;
+    }
+    try {
+      final user = await FirestoreService().getUserByReferralCode(code);
+      if (user != null) {
+        setState(() {
+          _sponsorName = '${user.firstName ?? ''} ${user.lastName ?? ''}'.trim();
+          _referredBy = code;
+        });
+      }
+    } catch (e) {
+      print('❌ Error resolving referral code: $e');
+    }
+  }
 
   @override
   void dispose() {
@@ -39,7 +68,7 @@ class _NewRegistrationScreenState extends State<NewRegistrationScreen> {
     _emailController.dispose();
     _passwordController.dispose();
     _confirmPasswordController.dispose();
-    _referralCodeController.dispose();
+    _cityController.dispose();
     super.dispose();
   }
 
@@ -52,6 +81,11 @@ class _NewRegistrationScreenState extends State<NewRegistrationScreen> {
     return 1;
   }
 
+  Future<void> _updateUplineCounts(String? referralCode) async {
+    if (referralCode == null || referralCode.isEmpty) return;
+    await FirestoreService().incrementUplineCounts(referralCode);
+  }
+
   Future<void> _register() async {
     if (!_formKey.currentState!.validate()) return;
     setState(() => _isLoading = true);
@@ -62,8 +96,7 @@ class _NewRegistrationScreenState extends State<NewRegistrationScreen> {
 
       UserModel user = await AuthService().register(email, password);
 
-      final referralCode = _referralCodeController.text.trim();
-      final referredBy = referralCode.isNotEmpty ? referralCode : null;
+      final referredBy = _referredBy;
       final level = await _getReferrerLevel(referredBy);
 
       final newUser = UserModel(
@@ -74,12 +107,17 @@ class _NewRegistrationScreenState extends State<NewRegistrationScreen> {
         createdAt: DateTime.now(),
         country: _selectedCountry,
         state: _selectedState,
+        city: _cityController.text.trim(),
         referralCode: const Uuid().v4().substring(0, 8),
         referredBy: referredBy,
         level: level,
+        directSponsorCount: 0,
+        totalTeamCount: 0,
+        isAdmin: _isAdmin,
       );
 
       await FirestoreService().createUser(newUser.toMap());
+      await _updateUplineCounts(referredBy);
       await SessionManager().setCurrentUser(newUser);
 
       if (mounted) {
@@ -98,23 +136,6 @@ class _NewRegistrationScreenState extends State<NewRegistrationScreen> {
     }
   }
 
-  Future<void> _lookupSponsor() async {
-    final code = _referralCodeController.text.trim();
-    if (code.isEmpty) return;
-
-    try {
-      final name = await FirestoreService().getSponsorNameByReferralCode(code);
-      setState(() {
-        _sponsorName = name;
-      });
-    } catch (e) {
-      print('❌ Error retrieving sponsor name: $e');
-      setState(() {
-        _sponsorName = null;
-      });
-    }
-  }
-
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -125,6 +146,16 @@ class _NewRegistrationScreenState extends State<NewRegistrationScreen> {
           key: _formKey,
           child: Column(
             children: [
+              if (_sponsorName != null)
+                Padding(
+                  padding: const EdgeInsets.only(bottom: 12.0),
+                  child: Text('Sponsored by $_sponsorName', style: const TextStyle(fontWeight: FontWeight.bold)),
+                )
+              else if (_isAdmin)
+                const Padding(
+                  padding: EdgeInsets.only(bottom: 12.0),
+                  child: Text('You are creating your own TeamBuild Pro organization.', style: TextStyle(fontWeight: FontWeight.bold)),
+                ),
               TextFormField(
                 controller: _firstNameController,
                 decoration: const InputDecoration(labelText: 'First Name'),
@@ -184,18 +215,10 @@ class _NewRegistrationScreenState extends State<NewRegistrationScreen> {
               ),
               const SizedBox(height: 12),
               TextFormField(
-                controller: _referralCodeController,
-                decoration: const InputDecoration(labelText: 'Referral Code (optional)'),
-                onChanged: (_) => _lookupSponsor(),
+                controller: _cityController,
+                decoration: const InputDecoration(labelText: 'City'),
+                validator: (value) => value == null || value.isEmpty ? 'Enter your city' : null,
               ),
-              if (_sponsorName != null && _sponsorName!.isNotEmpty)
-                Padding(
-                  padding: const EdgeInsets.only(top: 8.0),
-                  child: Text(
-                    'Referred by: $_sponsorName',
-                    style: const TextStyle(fontWeight: FontWeight.w600),
-                  ),
-                ),
               const SizedBox(height: 24),
               SizedBox(
                 width: double.infinity,
@@ -213,4 +236,3 @@ class _NewRegistrationScreenState extends State<NewRegistrationScreen> {
     );
   }
 }
-// PATCH END

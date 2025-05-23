@@ -1,5 +1,3 @@
-// PATCHED — firestore_service.dart with uid validation, diagnostics, sponsor name lookup, and referralCode user lookup
-
 import 'package:cloud_firestore/cloud_firestore.dart';
 import '../models/user_model.dart';
 
@@ -120,4 +118,35 @@ class FirestoreService {
     return null;
   }
   // PATCH END
-}
+
+  // PATCH START: Upline counter traversal
+  Future<void> incrementUplineCounts(String referralCode) async {
+    String? currentCode = referralCode;
+    final visited = <String>{};
+
+    while (currentCode != null && !visited.contains(currentCode)) {
+      visited.add(currentCode);
+      final snapshot = await _firestore
+          .collection('users')
+          .where('referralCode', isEqualTo: currentCode)
+          .limit(1)
+          .get();
+
+      if (snapshot.docs.isEmpty) break;
+
+      final doc = snapshot.docs.first;
+      final data = doc.data();
+      final uid = doc.id;
+      final isDirect = visited.length == 1;
+
+      final updates = <String, dynamic>{};
+      if (isDirect) updates['direct_sponsor_count'] = FieldValue.increment(1);
+      updates['total_team_count'] = FieldValue.increment(1);
+
+      await _firestore.collection('users').doc(uid).update(updates);
+
+      currentCode = data['referredBy'];
+    }
+  }
+  // PATCH END
+} 
