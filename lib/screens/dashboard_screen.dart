@@ -1,5 +1,3 @@
-// PATCH START: dashboard_screen.dart — corrected referredByUid to referredBy in DownlineTeamScreen
-
 import 'package:flutter/material.dart';
 import '../screens/downline_team_screen.dart';
 import '../screens/profile_screen.dart';
@@ -8,6 +6,7 @@ import '../screens/share_screen.dart';
 import '../services/session_manager.dart';
 import '../models/user_model.dart';
 import '../widgets/header_widgets.dart';
+import '../screens/settings_screen.dart';
 
 class DashboardScreen extends StatelessWidget {
   const DashboardScreen({super.key});
@@ -29,6 +28,23 @@ class DashboardScreen extends StatelessWidget {
               ),
             ),
             const SizedBox(height: 32),
+            // PATCH START: Account Settings button
+            SizedBox(
+              width: double.infinity,
+              child: ElevatedButton.icon(
+                icon: const Icon(Icons.settings),
+                label: const Text('Account Settings'),
+                onPressed: () {
+                  Navigator.push(
+                    context,
+                    MaterialPageRoute(builder: (_) => const SettingsScreen()),
+                  );
+                },
+              ),
+            ),
+            const SizedBox(height: 16),
+            // PATCH END: Account Settings button
+
             SizedBox(
               width: double.infinity,
               child: ElevatedButton.icon(
@@ -78,5 +94,3 @@ class DashboardScreen extends StatelessWidget {
     );
   }
 }
-
-// PATCH END
