@@ -20,6 +20,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
 
   List<String> _selectedCountries = [];
   bool _selectAllCountries = false;
+  List<String> _originalSelectedCountries = [];
   int _directSponsorMin = 1;
   int _totalTeamMin = 1;
   bool _isLocked = false;
@@ -28,12 +29,20 @@ class _SettingsScreenState extends State<SettingsScreen> {
   String? _bizRefUrl;
 
   List<String> get allCountries {
-    final fullList = statesByCountry.keys.toList()..sort();
+    final fullList = statesByCountry.keys.toList();
+    final selected = List<String>.from(_selectedCountries);
+    final unselected = fullList.where((c) => !selected.contains(c)).toList();
+
+    selected.remove(_userCountry);
+    unselected.remove(_userCountry);
+
+    selected.sort();
+    unselected.sort();
+
     if (_userCountry != null) {
-      fullList.remove(_userCountry);
-      return [_userCountry!, ...fullList];
+      return [_userCountry!, ...selected, ...unselected];
     }
-    return fullList;
+    return [...selected, ...unselected];
   }
 
   Future<void> _loadUserSettings() async {
@@ -55,6 +64,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
           if (!countries.contains(country)) countries.insert(0, country);
         }
         _selectedCountries = countries;
+        _originalSelectedCountries = List.from(countries);
         _bizOpp = bizOpp;
         _bizRefUrl = bizRefUrl;
         _directSponsorMin = sponsorMin ?? 1;
@@ -166,7 +176,11 @@ class _SettingsScreenState extends State<SettingsScreen> {
                 onChanged: (value) {
                   setState(() {
                     _selectAllCountries = value!;
-                    _selectedCountries = value ? List.from(allCountries) : [_userCountry!];
+                    if (_selectAllCountries) {
+                      _selectedCountries = List.from(allCountries);
+                    } else {
+                      _selectedCountries = List.from(_originalSelectedCountries);
+                    }
                   });
                 },
               ),
@@ -208,14 +222,14 @@ class _SettingsScreenState extends State<SettingsScreen> {
               ),
               const SizedBox(height: 24),
               Center(
-              child: Padding(
-                padding: EdgeInsets.only(bottom: 20),
-                child: ElevatedButton(
-                  onPressed: _submit,
-                  child: const Text('Save Settings'),
+                child: Padding(
+                  padding: const EdgeInsets.only(bottom: 20),
+                  child: ElevatedButton(
+                    onPressed: _submit,
+                    child: const Text('Save Settings'),
+                  ),
                 ),
               ),
-            ),
             ],
           ),
         ),
