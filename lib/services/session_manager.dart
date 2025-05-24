@@ -5,35 +5,45 @@ import 'dart:convert';
 class SessionManager {
   static const String _userKey = 'user';
   static const String _biometricKey = 'biometric_enabled';
+  static const String _logoutTimeKey = 'last_logout_time';
 
-  Future<void> saveUser(UserModel user) async {
-    final prefs = await SharedPreferences.getInstance();
-    await prefs.setString(_userKey, jsonEncode(user.toMap()));
-  }
-
+  // PATCH START: Unified and debug-enhanced session setter
   Future<void> setCurrentUser(UserModel user) async {
     final prefs = await SharedPreferences.getInstance();
     final userMap = jsonEncode(user.toMap());
     await prefs.setString(_userKey, userMap);
-    print('💾 SessionManager — User session saved');
+    print('📂 SessionManager — User session saved with UID: ${user.uid}');
   }
+  // PATCH END
 
+  // PATCH START: Hydrated session reader with UID verification
   Future<UserModel?> getCurrentUser() async {
     final prefs = await SharedPreferences.getInstance();
     final userData = prefs.getString(_userKey);
-    if (userData == null) return null;
+    if (userData == null) {
+      print('⚠️ SessionManager — No session data found');
+      return null;
+    }
     try {
-      return UserModel.fromMap(jsonDecode(userData));
+      final map = jsonDecode(userData);
+      final user = UserModel.fromMap(map);
+      if (user.uid.isEmpty) {
+        print('⚠️ SessionManager — Decoded user has empty UID');
+        return null;
+      }
+      print('✅ SessionManager — User hydrated: ${user.uid}');
+      return user;
     } catch (e) {
       print('❌ Failed to decode user session: $e');
       return null;
     }
   }
+  // PATCH END
 
   Future<void> clearSession() async {
     final prefs = await SharedPreferences.getInstance();
     await prefs.remove(_userKey);
-    print('🧹 Session cleared — biometric flag preserved');
+    print('🩹 Session cleared — biometric flag preserved');
   }
 
   Future<void> setBiometricEnabled(bool enabled) async {
@@ -47,9 +57,6 @@ class SessionManager {
     return prefs.getBool(_biometricKey) ?? false;
   }
 
-  // PATCH START: Logout cooldown mechanism
-  static const String _logoutTimeKey = 'last_logout_time';
-
   Future<void> setLogoutTimestamp() async {
     final prefs = await SharedPreferences.getInstance();
     await prefs.setInt(_logoutTimeKey, DateTime.now().millisecondsSinceEpoch);
@@ -61,5 +68,4 @@ class SessionManager {
     final now = DateTime.now().millisecondsSinceEpoch;
     return now - timestamp < seconds * 1000;
   }
-  // PATCH END
 }

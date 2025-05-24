@@ -26,6 +26,8 @@ dependencies:
   firebase_auth: ^5.5.3
   uuid: ^4.0.0
   share_plus: ^7.2.1
+  url_launcher: ^6.2.5
+
 
 dev_dependencies:
   flutter_test:

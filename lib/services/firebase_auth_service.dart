@@ -9,7 +9,7 @@ class FirebaseAuthService {
   FirebaseAuthService({required this.apiKey});
 
   Future<bool> signIn(String email, String password) async {
-    final url = 'https://identitytoolkit.googleapis.com/v1/accounts:signInWithPassword?key=\$apiKey';
+    final url = 'https://identitytoolkit.googleapis.com/v1/accounts:signInWithPassword?key=$apiKey';
 
     final response = await http.post(
       Uri.parse(url),
@@ -26,7 +26,7 @@ class FirebaseAuthService {
       await SessionManager.instance.saveSession(data['localId'], data['idToken']);
       return true;
     } else {
-      print('Login failed: \${response.body}');
+      print('Login failed: ${response.body}');
       return false;
     }
   }

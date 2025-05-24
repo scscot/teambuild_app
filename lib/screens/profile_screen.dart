@@ -119,7 +119,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
           await FirestoreService().updateUserField(authUser.uid, 'photoUrl', imageUrl);
 
           final updatedUser = _user!.copyWith(photoUrl: imageUrl);
-          await SessionManager().saveUser(updatedUser);
+          await SessionManager().setCurrentUser(updatedUser);
           setState(() => _user = updatedUser);
 
           print('✅ Image uploaded and profile updated successfully');

@@ -8,7 +8,8 @@ if len(sys.argv) != 4:
 
 uid, email, password = sys.argv[1], sys.argv[2], sys.argv[3]
 
-cred = credentials.Certificate("AIzaSyA45ZN9KUuaYT0OHYZ9DmX2Jc8028Ftcvc.json")
+cred = credentials.Certificate("/Users/sscott/Desktop/tbp/secrets/serviceAccountKey.json")
+
 firebase_admin.initialize_app(cred)
 
 try:

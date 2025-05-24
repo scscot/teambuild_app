@@ -54,6 +54,9 @@ ios/Runner/Runner*.plist
 ios/Runner/Runner.entitlements
 ios_backup*/
 lib_backup/
+windows/
+linux/
+scripts/venv/
 
 # Xcode & macOS
 *.xcuserstate
@@ -94,3 +97,6 @@ ios/Runner 2.xcworkspace/xcshareddata/WorkspaceSettings.xcsettings
 ios/Runner 2.xcworkspace/xcshareddata/IDEWorkspaceChecks.plist
 ios/Runner 2.xcworkspace/contents.xcworkspacedata
 secrets/
+windows/flutter/generated_plugin_registrant.cc
+windows/flutter/generated_plugins.cmake
+linux/flutter/generated_plugin_registrant.cc

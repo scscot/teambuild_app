@@ -1,4 +1,4 @@
-// CLEAN PATCHED — auth_service.dart with UserModel integration
+// FINAL PATCHED — auth_service.dart with UserModel hydration
 
 import 'package:firebase_auth/firebase_auth.dart';
 import '../models/user_model.dart';

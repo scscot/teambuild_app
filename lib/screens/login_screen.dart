@@ -11,7 +11,6 @@ import 'dashboard_screen.dart';
 import 'new_registration_screen.dart';
 import '../widgets/header_widgets.dart';
 
-
 class LoginScreen extends StatefulWidget {
   const LoginScreen({super.key});
 
@@ -51,7 +50,6 @@ class _LoginScreenState extends State<LoginScreen> {
       );
 
       if (didAuthenticate) {
-        // Attempt to restore session from FirebaseAuth
         final currentUser = FirebaseAuth.instance.currentUser;
         if (currentUser != null && currentUser.uid.isNotEmpty) {
           final userData = await FirestoreService().getUserData(currentUser.uid);
@@ -83,7 +81,7 @@ class _LoginScreenState extends State<LoginScreen> {
         _emailController.text.trim(),
         _passwordController.text.trim(),
       );
-      await SessionManager().saveUser(user);
+      await SessionManager().setCurrentUser(user); // ✅ FIXED HERE
       Navigator.pushReplacement(
         context,
         MaterialPageRoute(builder: (_) => const DashboardScreen()),
