@@ -1,8 +1,10 @@
-// PATCHED — new_registration_screen.dart (referral code auto-detect + sponsor display + city field)
+// PATCHED — new_registration_screen.dart (referral code auto-detect + sponsor display)
 
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 import 'package:uuid/uuid.dart';
+import 'package:http/http.dart' as http;
+import 'dart:convert';
 import '../models/user_model.dart';
 import '../services/auth_service.dart';
 import '../services/firestore_service.dart';
@@ -34,6 +36,8 @@ class _NewRegistrationScreenState extends State<NewRegistrationScreen> {
   bool _isLoading = false;
   bool _isAdmin = false;
 
+  bool isDevMode = false;
+
   List<String> get states => statesByCountry[_selectedCountry] ?? [];
 
   @override
@@ -43,21 +47,34 @@ class _NewRegistrationScreenState extends State<NewRegistrationScreen> {
   }
 
   Future<void> _initReferral() async {
-    final code = widget.referralCode;
+    if (isDevMode) {
+      setState(() {
+        _referredBy = 'KJ8uFnlhKhWgBa4NVcwT';
+      });
+    }
+
+    final code = widget.referralCode ?? _referredBy;
     if (code == null || code.isEmpty) {
       setState(() => _isAdmin = true);
       return;
     }
+
     try {
-      final user = await FirestoreService().getUserByReferralCode(code);
-      if (user != null) {
+      final uri = Uri.parse(
+          'https://us-central1-teambuilder-plus-fe74d.cloudfunctions.net/getUserByReferralCode?code=$code');
+      final response = await http.get(uri);
+
+      if (response.statusCode == 200) {
+        final data = jsonDecode(response.body);
         setState(() {
-          _sponsorName = '${user.firstName ?? ''} ${user.lastName ?? ''}'.trim();
+          _sponsorName = '${data['firstName'] ?? ''} ${data['lastName'] ?? ''}'.trim();
           _referredBy = code;
         });
+      } else {
+        print('❌ Referral lookup failed: ${response.statusCode}');
       }
     } catch (e) {
-      print('❌ Error resolving referral code: $e');
+      print('❌ Error in getUserByReferralCode: $e');
     }
   }
 
@@ -149,7 +166,7 @@ class _NewRegistrationScreenState extends State<NewRegistrationScreen> {
               if (_sponsorName != null)
                 Padding(
                   padding: const EdgeInsets.only(bottom: 12.0),
-                  child: Text('Sponsored by $_sponsorName', style: const TextStyle(fontWeight: FontWeight.bold)),
+                  child: Text('Your Sponsor is $_sponsorName', style: const TextStyle(fontWeight: FontWeight.bold)),
                 )
               else if (_isAdmin)
                 const Padding(

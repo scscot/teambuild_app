@@ -1,67 +1,26 @@
-// index.js — Unified Cloud Functions for TeamBuilder+
-
 const { onRequest } = require("firebase-functions/v2/https");
-const { getFirestore } = require("firebase-admin/firestore");
 const { initializeApp } = require("firebase-admin/app");
+const { getFirestore } = require("firebase-admin/firestore");
 
 initializeApp();
+const db = getFirestore();
 
-// 🔍 Get All Downline Users
-exports.getDownlineUsers = onRequest(async (req, res) => {
+exports.getUserByReferralCode = onRequest(async (req, res) => {
   try {
-    const email = req.headers['x-user-email'];
+    const code = req.query.code;
+    if (!code) return res.status(400).json({ error: 'Missing referral code' });
 
-    if (!email) {
-      console.log('🚫 Missing x-user-email header');
-      return res.status(401).json({
-        error: 'Unauthorized - Missing x-user-email header',
-      });
-    }
-
-    console.log(`📩 Fetching downline for email: ${email}`);
-
-    const db = getFirestore();
-    const snapshot = await db.collection('users').get();
-    const users = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
-
-    return res.status(200).json(users);
-  } catch (err) {
-    console.error('🔥 Error in getDownlineUsers:', err);
-    res.status(500).json({ error: 'Internal server error' });
-  }
-});
-
-// 🧾 Get User Profile By Email
-exports.getUserProfileByEmail = onRequest(async (req, res) => {
-  try {
-    const email = req.headers['x-user-email'];
-
-    if (!email) {
-      console.log('🚫 Missing x-user-email header');
-      return res.status(401).json({
-        error: 'Unauthorized - Missing x-user-email header',
-      });
-    }
-
-    console.log(`🔍 Fetching user profile for: ${email}`);
-
-    const db = getFirestore();
-    const snapshot = await db
-      .collection('users')
-      .where('email', '==', email)
+    const snapshot = await db.collection('users')
+      .where('referralCode', '==', code)
       .limit(1)
       .get();
 
-    if (snapshot.empty) {
-      return res.status(404).json({ error: 'User not found' });
-    }
+    if (snapshot.empty) return res.status(404).json({ error: 'User not found' });
 
     const doc = snapshot.docs[0];
-    const userData = { id: doc.id, ...doc.data() };
-
-    return res.status(200).json(userData);
+    return res.status(200).json({ id: doc.id, ...doc.data() });
   } catch (err) {
-    console.error('🔥 Error in getUserProfileByEmail:', err);
-    res.status(500).json({ error: 'Internal server error' });
+    console.error('🔥 Error in getUserByReferralCode:', err);
+    return res.status(500).json({ error: 'Internal server error' });
   }
 });
