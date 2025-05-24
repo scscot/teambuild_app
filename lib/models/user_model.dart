@@ -1,4 +1,4 @@
-// FINAL PATCHED — user_model.dart with city, sponsor counts, and admin flag
+// FINAL PATCHED — user_model.dart with city, sponsor counts, and role (string-based)
 
 import 'package:cloud_firestore/cloud_firestore.dart';
 
@@ -18,7 +18,7 @@ class UserModel {
   final int? level;
   final int? directSponsorCount;
   final int? totalTeamCount;
-  final bool? isAdmin;
+  final String? role; // PATCHED: use role string instead of isAdmin bool
 
   UserModel({
     required this.uid,
@@ -36,7 +36,7 @@ class UserModel {
     this.level,
     this.directSponsorCount,
     this.totalTeamCount,
-    this.isAdmin,
+    this.role,
   });
 
   Map<String, dynamic> toMap() {
@@ -56,7 +56,7 @@ class UserModel {
       'level': level,
       'directSponsorCount': directSponsorCount,
       'totalTeamCount': totalTeamCount,
-      'isAdmin': isAdmin,
+      'role': role, // PATCHED
     };
   }
 
@@ -77,7 +77,7 @@ class UserModel {
       level: map['level'],
       directSponsorCount: map['directSponsorCount'],
       totalTeamCount: map['totalTeamCount'],
-      isAdmin: map['isAdmin'],
+      role: map['role'], // PATCHED
     );
   }
 
@@ -109,7 +109,7 @@ class UserModel {
     int? level,
     int? directSponsorCount,
     int? totalTeamCount,
-    bool? isAdmin,
+    String? role, // PATCHED
   }) {
     return UserModel(
       uid: uid ?? this.uid,
@@ -127,7 +127,7 @@ class UserModel {
       level: level ?? this.level,
       directSponsorCount: directSponsorCount ?? this.directSponsorCount,
       totalTeamCount: totalTeamCount ?? this.totalTeamCount,
-      isAdmin: isAdmin ?? this.isAdmin,
+      role: role ?? this.role, // PATCHED
     );
   }
 }

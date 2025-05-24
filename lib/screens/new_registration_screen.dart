@@ -1,4 +1,4 @@
-// PATCHED — new_registration_screen.dart (referral code auto-detect + sponsor display)
+// PATCHED — new_registration_screen.dart (referral code auto-detect + sponsor display + role handling)
 
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
@@ -33,8 +33,8 @@ class _NewRegistrationScreenState extends State<NewRegistrationScreen> {
   String? _selectedState;
   String? _sponsorName;
   String? _referredBy;
+  String? _role;
   bool _isLoading = false;
-  bool _isAdmin = false;
 
   bool isDevMode = false;
 
@@ -55,7 +55,7 @@ class _NewRegistrationScreenState extends State<NewRegistrationScreen> {
 
     final code = widget.referralCode ?? _referredBy;
     if (code == null || code.isEmpty) {
-      setState(() => _isAdmin = true);
+      setState(() => _role = 'admin');
       return;
     }
 
@@ -69,6 +69,7 @@ class _NewRegistrationScreenState extends State<NewRegistrationScreen> {
         setState(() {
           _sponsorName = '${data['firstName'] ?? ''} ${data['lastName'] ?? ''}'.trim();
           _referredBy = code;
+          _role = null;
         });
       } else {
         print('❌ Referral lookup failed: ${response.statusCode}');
@@ -130,7 +131,7 @@ class _NewRegistrationScreenState extends State<NewRegistrationScreen> {
         level: level,
         directSponsorCount: 0,
         totalTeamCount: 0,
-        isAdmin: _isAdmin,
+        role: _role,
       );
 
       await FirestoreService().createUser(newUser.toMap());
@@ -168,7 +169,7 @@ class _NewRegistrationScreenState extends State<NewRegistrationScreen> {
                   padding: const EdgeInsets.only(bottom: 12.0),
                   child: Text('Your Sponsor is $_sponsorName', style: const TextStyle(fontWeight: FontWeight.bold)),
                 )
-              else if (_isAdmin)
+              else if (_role == 'admin')
                 const Padding(
                   padding: EdgeInsets.only(bottom: 12.0),
                   child: Text('You are creating your own TeamBuild Pro organization.', style: TextStyle(fontWeight: FontWeight.bold)),

@@ -1,3 +1,5 @@
+// FINAL PATCHED — dashboard_screen.dart with admin-only Account Settings button
+
 import 'package:flutter/material.dart';
 import '../screens/downline_team_screen.dart';
 import '../screens/profile_screen.dart';
@@ -13,84 +15,90 @@ class DashboardScreen extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      appBar: AppHeaderWithMenu(),
-      body: Column(
-        crossAxisAlignment: CrossAxisAlignment.center,
-        children: [
-            const Padding(
-              padding: EdgeInsets.only(top: 24.0),
-              child: Center(
-                child: Text(
-                  'Dashboard',
-                  style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
+    return FutureBuilder<UserModel?> (
+      future: SessionManager().getCurrentUser(),
+      builder: (context, snapshot) {
+        final user = snapshot.data;
+
+        return Scaffold(
+          appBar: AppHeaderWithMenu(),
+          body: Column(
+            crossAxisAlignment: CrossAxisAlignment.center,
+            children: [
+              const Padding(
+                padding: EdgeInsets.only(top: 24.0),
+                child: Center(
+                  child: Text(
+                    'Dashboard',
+                    style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
+                  ),
                 ),
               ),
-            ),
-            const SizedBox(height: 32),
-            // PATCH START: Account Settings button
-            SizedBox(
-              width: double.infinity,
-              child: ElevatedButton.icon(
-                icon: const Icon(Icons.settings),
-                label: const Text('Account Settings'),
-                onPressed: () {
-                  Navigator.push(
-                    context,
-                    MaterialPageRoute(builder: (_) => const SettingsScreen()),
-                  );
-                },
+              const SizedBox(height: 32),
+              // PATCH START: Show Account Settings only for admin
+              if (user?.role == 'admin')
+                SizedBox(
+                  width: double.infinity,
+                  child: ElevatedButton.icon(
+                    icon: const Icon(Icons.settings),
+                    label: const Text('Account Settings'),
+                    onPressed: () {
+                      Navigator.push(
+                        context,
+                        MaterialPageRoute(builder: (_) => const SettingsScreen()),
+                      );
+                    },
+                  ),
+                ),
+              if (user?.role == 'admin') const SizedBox(height: 16),
+              // PATCH END
+              SizedBox(
+                width: double.infinity,
+                child: ElevatedButton.icon(
+                  icon: const Icon(Icons.person),
+                  label: const Text('My Profile'),
+                  onPressed: () {
+                    Navigator.push(
+                      context,
+                      MaterialPageRoute(builder: (_) => const ProfileScreen()),
+                    );
+                  },
+                ),
               ),
-            ),
-            const SizedBox(height: 16),
-            // PATCH END: Account Settings button
-
-            SizedBox(
-              width: double.infinity,
-              child: ElevatedButton.icon(
-                icon: const Icon(Icons.person),
-                label: const Text('My Profile'),
-                onPressed: () {
-                  Navigator.push(
-                    context,
-                    MaterialPageRoute(builder: (_) => const ProfileScreen()),
-                  );
-                },
+              const SizedBox(height: 16),
+              SizedBox(
+                width: double.infinity,
+                child: ElevatedButton.icon(
+                  icon: const Icon(Icons.group),
+                  label: const Text('My Downline'),
+                  onPressed: () {
+                    Navigator.push(
+                      context,
+                      MaterialPageRoute(
+                        builder: (_) => const DownlineTeamScreen(referredBy: 'demo-user'),
+                      ),
+                    );
+                  },
+                ),
               ),
-            ),
-            const SizedBox(height: 16),
-            SizedBox(
-              width: double.infinity,
-              child: ElevatedButton.icon(
-                icon: const Icon(Icons.group),
-                label: const Text('My Downline'),
-                onPressed: () {
-                  Navigator.push(
-                    context,
-                    MaterialPageRoute(
-                      builder: (_) => const DownlineTeamScreen(referredBy: 'demo-user'),
-                    ),
-                  );
-                },
+              const SizedBox(height: 16),
+              SizedBox(
+                width: double.infinity,
+                child: ElevatedButton.icon(
+                  icon: const Icon(Icons.ios_share),
+                  label: const Text('Share App'),
+                  onPressed: () {
+                    Navigator.push(
+                      context,
+                      MaterialPageRoute(builder: (_) => ShareScreen()),
+                    );
+                  },
+                ),
               ),
-            ),
-            const SizedBox(height: 16),
-            SizedBox(
-              width: double.infinity,
-              child: ElevatedButton.icon(
-                icon: const Icon(Icons.ios_share),
-                label: const Text('Share App'),
-                onPressed: () {
-                  Navigator.push(
-                    context,
-                    MaterialPageRoute(builder: (_) => ShareScreen()),
-                  );
-                },
-              ),
-            ),
-          ],
-
-      ),
+            ],
+          ),
+        );
+      },
     );
   }
 }
