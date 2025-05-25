@@ -4,7 +4,7 @@ import '../services/auth_service.dart';
 import '../services/firestore_service.dart';
 import '../models/app_user_model.dart';
 import 'sign_in_screen.dart';
-
+import 'package:flutter/foundation.dart';
 class HomePage extends StatefulWidget {
   final String email;
 
@@ -24,8 +24,8 @@ class _HomePageState extends State<HomePage> {
   @override
   void initState() {
     super.initState();
-    print('⚠️ HomePage initState triggered');
-    print('🧪 HomePage attempting to load user with email: ${widget.email}');
+    debugPrint('⚠️ HomePage initState triggered');
+    debugPrint('🧪 HomePage attempting to load user with email: ${widget.email}');
     _loadUserProfile();
   }
 

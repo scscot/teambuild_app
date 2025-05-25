@@ -1,8 +1,11 @@
 import 'package:shared_preferences/shared_preferences.dart';
 import '../models/user_model.dart';
 import 'dart:convert';
+import 'package:flutter/foundation.dart';
 
 class SessionManager {
+  static final SessionManager instance = SessionManager();
+
   static const String _userKey = 'user';
   static const String _biometricKey = 'biometric_enabled';
   static const String _logoutTimeKey = 'last_logout_time';
@@ -11,27 +14,27 @@ class SessionManager {
     final prefs = await SharedPreferences.getInstance();
     final userMap = jsonEncode(user.toMap());
     await prefs.setString(_userKey, userMap);
-    print('📂 SessionManager — User session saved with UID: ${user.uid}');
+    debugPrint('📂 SessionManager — User session saved with UID: ${user.uid}');
   }
 
   Future<UserModel?> getCurrentUser() async {
     final prefs = await SharedPreferences.getInstance();
     final userData = prefs.getString(_userKey);
     if (userData == null) {
-      print('⚠️ SessionManager — No session data found');
+      debugPrint('⚠️ SessionManager — No session data found');
       return null;
     }
     try {
       final map = jsonDecode(userData);
       final user = UserModel.fromMap(map);
       if (user.uid.isEmpty) {
-        print('⚠️ SessionManager — Decoded user has empty UID');
+        debugPrint('⚠️ SessionManager — Decoded user has empty UID');
         return null;
       }
-      print('✅ SessionManager — User hydrated: ${user.uid}');
+      debugPrint('✅ SessionManager — User hydrated: ${user.uid}');
       return user;
     } catch (e) {
-      print('❌ Failed to decode user session: $e');
+      debugPrint('❌ Failed to decode user session: $e');
       return null;
     }
   }
@@ -39,29 +42,42 @@ class SessionManager {
   Future<void> clearSession() async {
     final prefs = await SharedPreferences.getInstance();
     await prefs.remove(_userKey);
-    print('🩹 Session cleared — biometric flag preserved');
+    await prefs.remove(_biometricKey);
+    await prefs.remove(_logoutTimeKey);
+    debugPrint('🧹 SessionManager — Session cleared');
   }
 
   Future<void> setBiometricEnabled(bool enabled) async {
     final prefs = await SharedPreferences.getInstance();
     await prefs.setBool(_biometricKey, enabled);
-    print('🟢 Biometric preference saved: $enabled');
   }
 
-  Future<bool> getBiometricEnabled() async {
+  Future<bool> isBiometricEnabled() async {
     final prefs = await SharedPreferences.getInstance();
     return prefs.getBool(_biometricKey) ?? false;
   }
 
-  Future<void> setLogoutTimestamp() async {
+  Future<void> setLastLogoutTime(DateTime time) async {
     final prefs = await SharedPreferences.getInstance();
-    await prefs.setInt(_logoutTimeKey, DateTime.now().millisecondsSinceEpoch);
+    await prefs.setString(_logoutTimeKey, time.toIso8601String());
   }
 
-  Future<bool> isLogoutCooldownActive(int seconds) async {
+  Future<DateTime?> getLastLogoutTime() async {
     final prefs = await SharedPreferences.getInstance();
-    final timestamp = prefs.getInt(_logoutTimeKey) ?? 0;
-    final now = DateTime.now().millisecondsSinceEpoch;
-    return now - timestamp < seconds * 1000;
+    final isoTime = prefs.getString(_logoutTimeKey);
+    return isoTime != null ? DateTime.tryParse(isoTime) : null;
+  }
+
+  // PATCH START: Add cooldown logic for biometric login
+  Future<bool> isLogoutCooldownActive(int minutes) async {
+    final lastLogout = await getLastLogoutTime();
+    if (lastLogout == null) return false;
+    final elapsed = DateTime.now().difference(lastLogout);
+    return elapsed.inMinutes < minutes;
+  }
+  // PATCH END
+
+  Future<bool> getBiometricEnabled() async {
+    return isBiometricEnabled();
   }
 }

@@ -1,5 +1,6 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
 import '../models/user_model.dart';
+import 'package:flutter/foundation.dart';
 
 class FirestoreService {
   final FirebaseFirestore _firestore = FirebaseFirestore.instance;
@@ -27,21 +28,22 @@ class FirestoreService {
 
   Future<void> updateUser(String uid, Map<String, dynamic> updates) async {
     if (uid.isEmpty) {
-      print(
+      debugPrint(
           '❌ FirestoreService.updateUser — UID is empty. Cannot update user.');
       throw ArgumentError('User ID cannot be empty');
     }
-    print('📡 FirestoreService.updateUser — Updating UID: $uid');
-    print('📦 Update Payload: $updates');
+    debugPrint('📡 FirestoreService.updateUser — Updating UID: $uid');
+    debugPrint('📦 Update Payload: $updates');
     await _firestore.collection('users').doc(uid).update(updates);
   }
 
   Future<void> updateUserField(String uid, String field, dynamic value) async {
     try {
       await _firestore.collection('users').doc(uid).update({field: value});
-      print('✅ Firestore field "$field" updated successfully for user $uid');
+      debugPrint(
+          '✅ Firestore field "$field" updated successfully for user $uid');
     } catch (e) {
-      print('❌ Failed to update field "$field" for user $uid: $e');
+      debugPrint('❌ Failed to update field "$field" for user $uid: $e');
       rethrow;
     }
   }
@@ -60,7 +62,7 @@ class FirestoreService {
         return 'N/A';
       }
     } catch (e) {
-      print('❌ Error retrieving user full name: $e');
+      debugPrint('❌ Error retrieving user full name: $e');
       return 'N/A';
     }
   }
@@ -94,7 +96,7 @@ class FirestoreService {
       }
       return 'N/A';
     } catch (e) {
-      print('❌ Error retrieving sponsor name by referralCode: $e');
+      debugPrint('❌ Error retrieving sponsor name by referralCode: $e');
       return 'N/A';
     }
   }
@@ -111,7 +113,7 @@ class FirestoreService {
         return UserModel.fromFirestore(snapshot.docs.first);
       }
     } catch (e) {
-      print('❌ Error in getUserByReferralCode: $e');
+      debugPrint('❌ Error in getUserByReferralCode: $e');
     }
     return null;
   }

@@ -3,6 +3,7 @@
 import 'package:firebase_auth/firebase_auth.dart';
 import '../models/user_model.dart';
 import '../services/firestore_service.dart';
+import 'package:flutter/foundation.dart';
 
 class AuthService {
   final FirebaseAuth _auth = FirebaseAuth.instance;
@@ -17,10 +18,10 @@ class AuthService {
       final user = await FirestoreService().getUser(uid);
       if (user == null) throw Exception('User not found in Firestore.');
 
-      print('✅ AuthService — Login success. UID: $uid');
+      debugPrint('✅ AuthService — Login success. UID: $uid');
       return user;
     } catch (e) {
-      print('❌ AuthService — Login failed: $e');
+      debugPrint('❌ AuthService — Login failed: $e');
       rethrow;
     }
   }
@@ -36,16 +37,16 @@ class AuthService {
       if (user == null)
         throw Exception('User not found in Firestore after registration.');
 
-      print('✅ AuthService — Registration success. UID: $uid');
+      debugPrint('✅ AuthService — Registration success. UID: $uid');
       return user;
     } catch (e) {
-      print('❌ AuthService — Registration failed: $e');
+      debugPrint('❌ AuthService — Registration failed: $e');
       rethrow;
     }
   }
 
   Future<void> signOut() async {
     await _auth.signOut();
-    print('👋 AuthService — User signed out');
+    debugPrint('👋 AuthService — User signed out');
   }
 }

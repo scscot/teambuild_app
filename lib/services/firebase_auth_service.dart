@@ -1,6 +1,7 @@
 import 'dart:convert';
 import 'package:http/http.dart' as http;
 import 'session_manager.dart';
+import 'package:flutter/foundation.dart';
 
 class FirebaseAuthService {
   final String apiKey;
@@ -27,7 +28,7 @@ class FirebaseAuthService {
           .saveSession(data['localId'], data['idToken']);
       return true;
     } else {
-      print('Login failed: ${response.body}');
+      debugPrint('Login failed: ${response.body}');
       return false;
     }
   }

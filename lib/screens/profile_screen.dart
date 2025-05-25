@@ -48,23 +48,23 @@ class _ProfileScreenState extends State<ProfileScreen> {
   Future<void> _loadUserData() async {
     final currentUser = await SessionManager().getCurrentUser();
     if (currentUser != null) {
-      print(
+      debugPrint(
           '✅ Current user loaded: ${currentUser.firstName} ${currentUser.lastName}');
       setState(() => _user = currentUser);
 
       if (currentUser.referredBy != null &&
           currentUser.referredBy!.isNotEmpty) {
-        print(
+        debugPrint(
             '🔎 Looking up sponsor name by referralCode: ${currentUser.referredBy}');
         try {
           final sponsorName = await FirestoreService()
               .getSponsorNameByReferralCode(currentUser.referredBy!);
           if (mounted) {
-            print('✅ Sponsor name resolved: $sponsorName');
+            debugPrint('✅ Sponsor name resolved: $sponsorName');
             setState(() => _sponsorName = sponsorName);
           }
         } catch (e) {
-          print('❌ Failed to load sponsor data: $e');
+          debugPrint('❌ Failed to load sponsor data: $e');
         }
       }
     }
@@ -103,7 +103,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
         try {
           final authUser = FirebaseAuth.instance.currentUser;
           if (authUser == null) {
-            print('❌ No FirebaseAuth user found. Cannot upload image.');
+            debugPrint('❌ No FirebaseAuth user found. Cannot upload image.');
             return;
           }
 
@@ -127,9 +127,9 @@ class _ProfileScreenState extends State<ProfileScreen> {
           await SessionManager().setCurrentUser(updatedUser);
           setState(() => _user = updatedUser);
 
-          print('✅ Image uploaded and profile updated successfully');
+          debugPrint('✅ Image uploaded and profile updated successfully');
         } catch (e) {
-          print('❌ Error uploading image: $e');
+          debugPrint('❌ Error uploading image: $e');
         } finally {
           Navigator.of(context).pop(); // dismiss spinner
         }
@@ -143,7 +143,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
   }
 
   Future<void> _toggleBiometric(bool value) async {
-    print('🟢 Biometric toggle set to: $value');
+    debugPrint('🟢 Biometric toggle set to: $value');
     setState(() => _biometricEnabled = value);
     await SessionManager().setBiometricEnabled(value);
   }

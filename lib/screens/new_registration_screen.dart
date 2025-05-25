@@ -1,7 +1,7 @@
 // FINAL PATCHED — new_registration_screen.dart with upline qualification logic
 
 import 'package:flutter/material.dart';
-import 'package:intl/intl.dart';
+
 import 'package:uuid/uuid.dart';
 import 'package:http/http.dart' as http;
 import 'dart:convert';
@@ -75,10 +75,10 @@ class _NewRegistrationScreenState extends State<NewRegistrationScreen> {
           _role = null;
         });
       } else {
-        print('❌ Referral lookup failed: ${response.statusCode}');
+        debugPrint('❌ Referral lookup failed: ${response.statusCode}');
       }
     } catch (e) {
-      print('❌ Error in getUserByReferralCode: $e');
+      debugPrint('❌ Error in getUserByReferralCode: $e');
     }
   }
 
@@ -173,7 +173,7 @@ class _NewRegistrationScreenState extends State<NewRegistrationScreen> {
         );
       }
     } catch (e) {
-      print('❌ Registration error: $e');
+      debugPrint('❌ Registration error: $e');
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(content: Text('Registration failed: $e')),
       );

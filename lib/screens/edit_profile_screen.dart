@@ -63,7 +63,7 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
       await SessionManager().setCurrentUser(updatedUser);
       if (mounted) Navigator.of(context).pop(updatedUser);
     } catch (e) {
-      print('❌ Failed to update profile: $e');
+      debugPrint('❌ Failed to update profile: $e');
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(content: Text('Failed to update profile: $e')),
       );

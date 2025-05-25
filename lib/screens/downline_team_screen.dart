@@ -5,9 +5,11 @@ import 'dart:async';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import '../models/user_model.dart';
-import '../services/session_manager.dart';
+
+
 import '../screens/member_detail_screen.dart';
 import '../widgets/header_widgets.dart';
+
 
 enum JoinWindow {
   none,

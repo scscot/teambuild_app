@@ -9,7 +9,7 @@ import '../screens/dashboard_screen.dart';
 import '../screens/join_opportunity_screen.dart';
 import '../services/session_manager.dart';
 import '../models/user_model.dart';
-
+import 'package:flutter/foundation.dart';
 class AppHeaderWithMenu extends StatefulWidget implements PreferredSizeWidget {
   const AppHeaderWithMenu({super.key});
 
@@ -53,7 +53,7 @@ class _AppHeaderWithMenuState extends State<AppHeaderWithMenu> {
         setState(() => showJoinOpportunity = true);
       }
     } catch (e) {
-      print('❌ Failed to evaluate join opportunity eligibility: $e');
+      debugPrint('❌ Failed to evaluate join opportunity eligibility: $e');
     }
   }
 

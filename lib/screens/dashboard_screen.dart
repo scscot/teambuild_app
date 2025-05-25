@@ -2,13 +2,13 @@ import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import '../screens/downline_team_screen.dart';
 import '../screens/profile_screen.dart';
-import '../screens/login_screen.dart';
 import '../screens/share_screen.dart';
 import '../services/session_manager.dart';
 import '../models/user_model.dart';
 import '../widgets/header_widgets.dart';
 import '../screens/settings_screen.dart';
 import '../screens/join_opportunity_screen.dart';
+
 
 class DashboardScreen extends StatefulWidget {
   const DashboardScreen({super.key});
@@ -33,7 +33,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
     final sessionUser = await SessionManager().getCurrentUser();
 
     if (sessionUser == null || sessionUser.uid.isEmpty) {
-      print('❌ Session user is null or has empty UID');
+      debugPrint('❌ Session user is null or has empty UID');
       setState(() => _isLoading = false);
       return;
     }
@@ -54,11 +54,11 @@ class _DashboardScreenState extends State<DashboardScreen> {
           adminSettings.data()?['direct_sponsor_min'] ?? 1;
       final int totalTeamMin = adminSettings.data()?['total_team_min'] ?? 1;
 
-      print('🔎 Firestore values:');
-      print('  🔸 directSponsorMin: $directSponsorMin');
-      print('  🔸 totalTeamMin:     $totalTeamMin');
-      print('  🔹 user.directSponsorCount: ${updatedUser.directSponsorCount}');
-      print('  🔹 user.totalTeamCount:     ${updatedUser.totalTeamCount}');
+      debugPrint('🔎 Firestore values:');
+      debugPrint('  🔸 directSponsorMin: $directSponsorMin');
+      debugPrint('  🔸 totalTeamMin:     $totalTeamMin');
+      debugPrint('  🔹 user.directSponsorCount: ${updatedUser.directSponsorCount}');
+      debugPrint('  🔹 user.totalTeamCount:     ${updatedUser.totalTeamCount}');
 
       setState(() {
         _user = updatedUser;
@@ -67,7 +67,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
         _isLoading = false;
       });
     } catch (e) {
-      print('🔥 Error loading dashboard data: $e');
+      debugPrint('🔥 Error loading dashboard data: $e');
       setState(() => _isLoading = false);
     }
   }

@@ -31,12 +31,12 @@ class _LoginScreenState extends State<LoginScreen> {
   }
 
   Future<void> _tryBiometricLogin() async {
-    if (await SessionManager().isLogoutCooldownActive(5)) {
-      print('⏳ Skipping biometric login — logout cooldown in effect');
+    if (await SessionManager.instance.isLogoutCooldownActive(5)) {
+      debugPrint('⏳ Skipping biometric login — logout cooldown in effect');
       return;
     }
 
-    final enabled = await SessionManager().getBiometricEnabled();
+    final enabled = await SessionManager.instance.getBiometricEnabled();
     if (!enabled) return;
 
     final auth = LocalAuthentication();
@@ -59,7 +59,7 @@ class _LoginScreenState extends State<LoginScreen> {
           if (userData != null) {
             final fullUser =
                 UserModel.fromMap(userData).copyWith(uid: currentUser.uid);
-            await SessionManager().setCurrentUser(fullUser);
+            await SessionManager.instance.setCurrentUser(fullUser);
             if (mounted) {
               Navigator.pushReplacement(
                 context,
@@ -69,10 +69,10 @@ class _LoginScreenState extends State<LoginScreen> {
             return;
           }
         }
-        print('❌ No user session found after biometric login');
+        debugPrint('❌ No user session found after biometric login');
       }
     } catch (e) {
-      print('❌ Biometric login error: $e');
+      debugPrint('❌ Biometric login error: $e');
     }
   }
 
@@ -85,7 +85,7 @@ class _LoginScreenState extends State<LoginScreen> {
         _emailController.text.trim(),
         _passwordController.text.trim(),
       );
-      await SessionManager().setCurrentUser(user); // ✅ FIXED HERE
+      await SessionManager.instance.setCurrentUser(user); // ✅ FIXED HERE
       Navigator.pushReplacement(
         context,
         MaterialPageRoute(builder: (_) => const DashboardScreen()),
