@@ -75,7 +75,7 @@ class _JoinOpportunityScreenState extends State<JoinOpportunityScreen> {
       builder: (_) => AlertDialog(
         title: const Text('Before You Continue'),
         content: Text(
-          "Important: After completing your $bizopp registration, you must add your new $bizOpp referral link to your TeamBuild Pro profile. This will ensure downline members who join $bizOpp after you are automatically placed in your $bizOpp downline."
+          "Important: After completing your $bizOpp registration, you must add your new $bizOpp referral link to your TeamBuild Pro profile. This will ensure downline members who join $bizOpp after you are automatically placed in your $bizOpp downline."
         ),
         actions: [
           TextButton(

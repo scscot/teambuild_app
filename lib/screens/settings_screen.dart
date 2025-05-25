@@ -3,6 +3,7 @@ import '../widgets/header_widgets.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import '../data/states_by_country.dart';
+import 'package:multi_select_flutter/multi_select_flutter.dart';
 
 class SettingsScreen extends StatefulWidget {
   const SettingsScreen({super.key});
@@ -21,8 +22,8 @@ class _SettingsScreenState extends State<SettingsScreen> {
   List<String> _selectedCountries = [];
   bool _selectAllCountries = false;
   List<String> _originalSelectedCountries = [];
-  int _directSponsorMin = 1;
-  int _totalTeamMin = 1;
+  int _directSponsorMin = 5;
+  int _totalTeamMin = 10;
   bool _isLocked = false;
   String? _userCountry;
   String? _bizOpp;
@@ -67,8 +68,8 @@ class _SettingsScreenState extends State<SettingsScreen> {
         _originalSelectedCountries = List.from(countries);
         _bizOpp = bizOpp;
         _bizRefUrl = bizRefUrl;
-        _directSponsorMin = sponsorMin ?? 1;
-        _totalTeamMin = teamMin ?? 1;
+        _directSponsorMin = sponsorMin ?? 5;
+        _totalTeamMin = teamMin ?? 10;
         _isLocked = _bizOpp != null && _bizRefUrl != null;
       });
     }
@@ -184,41 +185,46 @@ class _SettingsScreenState extends State<SettingsScreen> {
                   });
                 },
               ),
-              if (!_selectAllCountries)
-                Wrap(
-                  spacing: 6,
-                  children: allCountries.map((country) {
-                    final isUserCountry = country == _userCountry;
-                    return FilterChip(
-                      label: Text(country),
-                      selected: _selectedCountries.contains(country),
-                      onSelected: isUserCountry ? null : (selected) {
-                        setState(() {
-                          if (selected) {
-                            _selectedCountries.add(country);
-                          } else {
-                            _selectedCountries.remove(country);
-                          }
-                        });
-                      },
-                    );
-                  }).toList(),
-                ),
-              const SizedBox(height: 24),
-              const Text('Performance Requirements', style: TextStyle(fontWeight: FontWeight.bold)),
-              const SizedBox(height: 4),
-              const Text("Once a downline member meets the minimum direct sponsor and total team size criteria, they'll receive an invitation and referral link to join your business opportunity."),
-              DropdownButtonFormField<int>(
-                value: _directSponsorMin,
-                decoration: const InputDecoration(labelText: 'Minimum Direct Sponsors'),
-                items: List.generate(10, (i) => i + 1).map((num) => DropdownMenuItem(value: num, child: Text(num.toString()))).toList(),
-                onChanged: (value) => setState(() => _directSponsorMin = value!),
+              // PATCH START: Replace FilterChip layout with multi-select modal
+              MultiSelectDialogField<String>(
+                items: allCountries.map((e) => MultiSelectItem<String>(e, e)).toList(),
+                initialValue: _selectedCountries,
+                title: const Text("Countries"),
+                buttonText: const Text("Select Individual Countries"),
+                searchable: true,
+                onConfirm: (values) {
+                  setState(() {
+                    _selectedCountries = List.from(values);
+                  });
+                },
               ),
-              DropdownButtonFormField<int>(
-                value: _totalTeamMin,
+              // PATCH END
+              const SizedBox(height: 24),
+              const Text('Eligibility Requirements', style: TextStyle(fontWeight: FontWeight.bold)),
+              const SizedBox(height: 4),
+              Text(
+                  "Once a downline member meets the minimum direct sponsor and total team size criteria, they'll receive an invitation and referral link to join ${_bizOpp ?? 'your business opportunity'}.",
+                ),
+
+              TextFormField(
+                initialValue: _directSponsorMin.toString(),
+                decoration: const InputDecoration(labelText: 'Minimum Direct Sponsors'),
+                keyboardType: TextInputType.number,
+                onChanged: (value) {
+                  setState(() {
+                    _directSponsorMin = int.tryParse(value) ?? 5;
+                  });
+                },
+              ),
+              TextFormField(
+                initialValue: _totalTeamMin.toString(),
                 decoration: const InputDecoration(labelText: 'Minimum Total Team Members'),
-                items: List.generate(20, (i) => i + 1).map((num) => DropdownMenuItem(value: num, child: Text(num.toString()))).toList(),
-                onChanged: (value) => setState(() => _totalTeamMin = value!),
+                keyboardType: TextInputType.number,
+                onChanged: (value) {
+                  setState(() {
+                    _totalTeamMin = int.tryParse(value) ?? 10;
+                  });
+                },
               ),
               const SizedBox(height: 24),
               Center(
