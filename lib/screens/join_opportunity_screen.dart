@@ -3,7 +3,7 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:url_launcher/url_launcher.dart';
 import '../widgets/header_widgets.dart';
-import 'join_opportunity_confirmation_screen.dart';
+import 'update_profile_screen.dart';
 
 class JoinOpportunityScreen extends StatefulWidget {
   const JoinOpportunityScreen({super.key});
@@ -43,7 +43,6 @@ class _JoinOpportunityScreenState extends State<JoinOpportunityScreen> {
       currentTeam = userData['total_team_count'] ?? 0;
     });
 
-    // Traverse up upline to find first sponsor with biz_opp_ref_url
     String? currentUid = userData['referredBy'];
     while (currentUid != null) {
       final refDoc = await FirebaseFirestore.instance.collection('users').doc(currentUid).get();
@@ -70,6 +69,38 @@ class _JoinOpportunityScreenState extends State<JoinOpportunityScreen> {
     });
   }
 
+  Future<void> _confirmAndLaunchOpportunity() async {
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (_) => AlertDialog(
+        title: const Text('Before You Continue'),
+        content: Text(
+          "Important: After completing your $bizopp registration, you must add your new $bizOpp referral link to your TeamBuild Pro profile. This will ensure downline members who join $bizOpp after you are automatically placed in your $bizOpp downline."
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context, false),
+            child: const Text('Cancel'),
+          ),
+          ElevatedButton(
+            onPressed: () => Navigator.pop(context, true),
+            child: const Text('I Understand!'),
+          ),
+        ],
+      ),
+    );
+
+    if (confirmed == true && bizOppRefUrl != null) {
+      final uid = FirebaseAuth.instance.currentUser?.uid;
+      if (uid != null) {
+        await FirebaseFirestore.instance.collection('users').doc(uid).update({
+          'biz_visit_date': Timestamp.now(),
+        });
+      }
+      await launchUrl(Uri.parse(bizOppRefUrl!));
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     if (loading) {
@@ -93,37 +124,34 @@ class _JoinOpportunityScreenState extends State<JoinOpportunityScreen> {
             ),
             const SizedBox(height: 16),
             Text(
-              "Your TeamBuild Pro downline is growing, and you've hit an exciting milestone: you've personally sponsored $directSponsorMin members and have a total of $totalTeamMin downline members!\n\nThis means you're now eligible to join the $bizOpp opportunity!\n\nSimply click the button below to complete your $bizOpp registration. Once you're done, come back to the TeamBuild Pro app and update your profile with your new $bizOpp referral link. That way, any of your downline who join $bizOpp after you will automatically be placed in your $bizOpp downline."
+              "You've reached a key milestone in TeamBuild Pro — you've personally sponsored $currentDirect member(s) and your total downline is now $currentTeam.\n\nYou're now eligible to register for $bizOpp!\n\nYour sponsor will be $sponsorName — the first person in your TeamBuild Pro upline who has already registered for $bizOpp. This might be different from your original TeamBuild Pro sponsor.",
             ),
             const SizedBox(height: 24),
-            Text(
-              'Join Opportunity',
-              style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
-            ),
-            const SizedBox(height: 12),
-            ElevatedButton(
-              onPressed: bizOppRefUrl != null
-                  ? () => launchUrl(Uri.parse(bizOppRefUrl!))
-                  : null,
-              child: Text('Join $bizOpp Now!'),
-            ),
-            const SizedBox(height: 16),
-            Text(
-              "Your ‘$bizOpp’ sponsor is $sponsorName — the first person in your TeamBuild Pro upline who has completed ‘$bizOpp’ registration. This may differ from your TeamBuild Pro sponsor if they haven't yet registered for ‘$bizOpp’.",
-              style: const TextStyle(fontSize: 14),
+            Center(
+              child: ElevatedButton(
+                onPressed: bizOppRefUrl != null ? _confirmAndLaunchOpportunity : null,
+                child: Text('Join $bizOpp Now!'),
+              ),
             ),
             const SizedBox(height: 32),
             Center(
-              child: ElevatedButton(
-                onPressed: () {
+              child: GestureDetector(
+                onTap: () {
                   Navigator.push(
                     context,
                     MaterialPageRoute(
-                      builder: (_) => const JoinOpportunityConfirmationScreen(),
+                      builder: (_) => const UpdateProfileScreen(),
                     ),
                   );
                 },
-                child: const Text('Update My Profile Now'),
+                child: Text(
+                  "I have completed my '$bizOpp' registration.",
+                  style: const TextStyle(
+                    fontSize: 16,
+                    color: Colors.deepPurple,
+                    decoration: TextDecoration.underline,
+                  ),
+                ),
               ),
             ),
           ],

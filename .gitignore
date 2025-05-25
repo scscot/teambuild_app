@@ -92,7 +92,6 @@ macos/Flutter/GeneratedPluginRegistrant.swift
 windows/flutter/generated_plugin_registrant.cc
 windows/flutter/generated_plugins.cmake
 scripts/pubspec.lock
-scripts/pubspec.lock
 ios/Runner 2.xcworkspace/xcshareddata/WorkspaceSettings.xcsettings
 ios/Runner 2.xcworkspace/xcshareddata/IDEWorkspaceChecks.plist
 ios/Runner 2.xcworkspace/contents.xcworkspacedata
