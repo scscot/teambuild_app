@@ -37,7 +37,8 @@ class _MemberDetailScreenState extends State<MemberDetailScreen> {
         });
 
         if (member.referredBy != null && member.referredBy!.isNotEmpty) {
-          final sponsorName = await FirestoreService().getSponsorNameByReferralCode(member.referredBy!);
+          final sponsorName = await FirestoreService()
+              .getSponsorNameByReferralCode(member.referredBy!);
           if (mounted) setState(() => _sponsorName = sponsorName);
         }
       }
@@ -67,19 +68,25 @@ class _MemberDetailScreenState extends State<MemberDetailScreen> {
                   Center(
                     child: CircleAvatar(
                       radius: 50,
-                      backgroundImage: _user!.photoUrl != null && _user!.photoUrl!.isNotEmpty
-                          ? NetworkImage(_user!.photoUrl!)
-                          : const AssetImage('..assets/images/default_avatar.png') as ImageProvider,
+                      backgroundImage:
+                          _user!.photoUrl != null && _user!.photoUrl!.isNotEmpty
+                              ? NetworkImage(_user!.photoUrl!)
+                              : const AssetImage(
+                                      '..assets/images/default_avatar.png')
+                                  as ImageProvider,
                     ),
                   ),
                   const SizedBox(height: 20),
-                  _buildInfoRow('Name', '${_user!.firstName} ${_user!.lastName}'),
+                  _buildInfoRow(
+                      'Name', '${_user!.firstName} ${_user!.lastName}'),
                   _buildInfoRow('City', _user!.city ?? 'N/A'),
                   _buildInfoRow('State/Province', _user!.state ?? 'N/A'),
                   _buildInfoRow('Country', _user!.country ?? 'N/A'),
                   _buildInfoRow(
                     'Join Date',
-                    _user!.createdAt != null ? DateFormat.yMMMMd().format(_user!.createdAt!) : 'N/A',
+                    _user!.createdAt != null
+                        ? DateFormat.yMMMMd().format(_user!.createdAt!)
+                        : 'N/A',
                   ),
                   if (_sponsorName != null && _sponsorName!.isNotEmpty)
                     _buildInfoRow('Sponsor Name', _sponsorName!),
@@ -93,7 +100,8 @@ class _MemberDetailScreenState extends State<MemberDetailScreen> {
                         icon: const Icon(Icons.message),
                         label: const Text('Send Message'),
                         style: ElevatedButton.styleFrom(
-                          padding: const EdgeInsets.symmetric(horizontal: 24.0, vertical: 12.0),
+                          padding: const EdgeInsets.symmetric(
+                              horizontal: 24.0, vertical: 12.0),
                           textStyle: const TextStyle(fontSize: 16),
                           shape: RoundedRectangleBorder(
                             borderRadius: BorderRadius.circular(8.0),

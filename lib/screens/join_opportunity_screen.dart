@@ -33,7 +33,8 @@ class _JoinOpportunityScreenState extends State<JoinOpportunityScreen> {
     final uid = FirebaseAuth.instance.currentUser?.uid;
     if (uid == null) return;
 
-    final userDoc = await FirebaseFirestore.instance.collection('users').doc(uid).get();
+    final userDoc =
+        await FirebaseFirestore.instance.collection('users').doc(uid).get();
     final userData = userDoc.data();
     if (userData == null) return;
 
@@ -45,7 +46,10 @@ class _JoinOpportunityScreenState extends State<JoinOpportunityScreen> {
 
     String? currentUid = userData['referredBy'];
     while (currentUid != null) {
-      final refDoc = await FirebaseFirestore.instance.collection('users').doc(currentUid).get();
+      final refDoc = await FirebaseFirestore.instance
+          .collection('users')
+          .doc(currentUid)
+          .get();
       final refData = refDoc.data();
       if (refData != null) {
         if (refData['biz_opp_ref_url'] != null) {
@@ -75,8 +79,7 @@ class _JoinOpportunityScreenState extends State<JoinOpportunityScreen> {
       builder: (_) => AlertDialog(
         title: const Text('Before You Continue'),
         content: Text(
-          "Important: After completing your $bizOpp registration, you must add your new $bizOpp referral link to your TeamBuild Pro profile. This will ensure downline members who join $bizOpp after you are automatically placed in your $bizOpp downline."
-        ),
+            "Important: After completing your $bizOpp registration, you must add your new $bizOpp referral link to your TeamBuild Pro profile. This will ensure downline members who join $bizOpp after you are automatically placed in your $bizOpp downline."),
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(context, false),
@@ -129,7 +132,8 @@ class _JoinOpportunityScreenState extends State<JoinOpportunityScreen> {
             const SizedBox(height: 24),
             Center(
               child: ElevatedButton(
-                onPressed: bizOppRefUrl != null ? _confirmAndLaunchOpportunity : null,
+                onPressed:
+                    bizOppRefUrl != null ? _confirmAndLaunchOpportunity : null,
                 child: Text('Join $bizOpp Now!'),
               ),
             ),

@@ -1,4 +1,3 @@
-
 import 'dart:convert';
 import 'package:http/http.dart' as http;
 import 'session_manager.dart';
@@ -9,7 +8,8 @@ class FirebaseAuthService {
   FirebaseAuthService({required this.apiKey});
 
   Future<bool> signIn(String email, String password) async {
-    final url = 'https://identitytoolkit.googleapis.com/v1/accounts:signInWithPassword?key=$apiKey';
+    final url =
+        'https://identitytoolkit.googleapis.com/v1/accounts:signInWithPassword?key=$apiKey';
 
     final response = await http.post(
       Uri.parse(url),
@@ -23,7 +23,8 @@ class FirebaseAuthService {
 
     if (response.statusCode == 200) {
       final data = json.decode(response.body);
-      await SessionManager.instance.saveSession(data['localId'], data['idToken']);
+      await SessionManager.instance
+          .saveSession(data['localId'], data['idToken']);
       return true;
     } else {
       print('Login failed: ${response.body}');

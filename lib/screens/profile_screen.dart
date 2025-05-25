@@ -48,13 +48,17 @@ class _ProfileScreenState extends State<ProfileScreen> {
   Future<void> _loadUserData() async {
     final currentUser = await SessionManager().getCurrentUser();
     if (currentUser != null) {
-      print('✅ Current user loaded: ${currentUser.firstName} ${currentUser.lastName}');
+      print(
+          '✅ Current user loaded: ${currentUser.firstName} ${currentUser.lastName}');
       setState(() => _user = currentUser);
 
-      if (currentUser.referredBy != null && currentUser.referredBy!.isNotEmpty) {
-        print('🔎 Looking up sponsor name by referralCode: ${currentUser.referredBy}');
+      if (currentUser.referredBy != null &&
+          currentUser.referredBy!.isNotEmpty) {
+        print(
+            '🔎 Looking up sponsor name by referralCode: ${currentUser.referredBy}');
         try {
-          final sponsorName = await FirestoreService().getSponsorNameByReferralCode(currentUser.referredBy!);
+          final sponsorName = await FirestoreService()
+              .getSponsorNameByReferralCode(currentUser.referredBy!);
           if (mounted) {
             print('✅ Sponsor name resolved: $sponsorName');
             setState(() => _sponsorName = sponsorName);
@@ -116,7 +120,8 @@ class _ProfileScreenState extends State<ProfileScreen> {
           await storageRef.putFile(file);
           final imageUrl = await storageRef.getDownloadURL();
 
-          await FirestoreService().updateUserField(authUser.uid, 'photoUrl', imageUrl);
+          await FirestoreService()
+              .updateUserField(authUser.uid, 'photoUrl', imageUrl);
 
           final updatedUser = _user!.copyWith(photoUrl: imageUrl);
           await SessionManager().setCurrentUser(updatedUser);
@@ -169,7 +174,8 @@ class _ProfileScreenState extends State<ProfileScreen> {
                           child: Center(
                             child: Text(
                               'My Profile',
-                              style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
+                              style: TextStyle(
+                                  fontSize: 20, fontWeight: FontWeight.bold),
                             ),
                           ),
                         ),
@@ -181,9 +187,12 @@ class _ProfileScreenState extends State<ProfileScreen> {
                               children: [
                                 CircleAvatar(
                                   radius: 50,
-                                  backgroundImage: _user!.photoUrl != null && _user!.photoUrl!.isNotEmpty
+                                  backgroundImage: _user!.photoUrl != null &&
+                                          _user!.photoUrl!.isNotEmpty
                                       ? NetworkImage(_user!.photoUrl!)
-                                      : const AssetImage('assets/images/default_avatar.png') as ImageProvider,
+                                      : const AssetImage(
+                                              'assets/images/default_avatar.png')
+                                          as ImageProvider,
                                 ),
                                 GestureDetector(
                                   onTap: _showImageSourceActionSheetWrapper,
@@ -205,7 +214,8 @@ class _ProfileScreenState extends State<ProfileScreen> {
                           ),
                         ),
                         const SizedBox(height: 20),
-                        _buildInfoRow('Name', '${_user!.firstName} ${_user!.lastName}'),
+                        _buildInfoRow(
+                            'Name', '${_user!.firstName} ${_user!.lastName}'),
                         _buildInfoRow('Email', _user!.email),
                         _buildInfoRow('City', _user!.city ?? 'N/A'),
                         _buildInfoRow('State/Province', _user!.state ?? 'N/A'),
@@ -224,7 +234,8 @@ class _ProfileScreenState extends State<ProfileScreen> {
                             icon: const Icon(Icons.edit),
                             label: const Text('Edit Profile'),
                             style: ElevatedButton.styleFrom(
-                              padding: const EdgeInsets.symmetric(horizontal: 24.0, vertical: 12.0),
+                              padding: const EdgeInsets.symmetric(
+                                  horizontal: 24.0, vertical: 12.0),
                               textStyle: const TextStyle(fontSize: 16),
                               shape: RoundedRectangleBorder(
                                 borderRadius: BorderRadius.circular(8.0),

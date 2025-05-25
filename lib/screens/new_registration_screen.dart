@@ -27,7 +27,8 @@ class _NewRegistrationScreenState extends State<NewRegistrationScreen> {
   final TextEditingController _lastNameController = TextEditingController();
   final TextEditingController _emailController = TextEditingController();
   final TextEditingController _passwordController = TextEditingController();
-  final TextEditingController _confirmPasswordController = TextEditingController();
+  final TextEditingController _confirmPasswordController =
+      TextEditingController();
   final TextEditingController _cityController = TextEditingController();
 
   String? _selectedCountry;
@@ -62,13 +63,14 @@ class _NewRegistrationScreenState extends State<NewRegistrationScreen> {
 
     try {
       final uri = Uri.parse(
-        'https://us-central1-teambuilder-plus-fe74d.cloudfunctions.net/getUserByReferralCode?code=$code');
+          'https://us-central1-teambuilder-plus-fe74d.cloudfunctions.net/getUserByReferralCode?code=$code');
       final response = await http.get(uri);
 
       if (response.statusCode == 200) {
         final data = jsonDecode(response.body);
         setState(() {
-          _sponsorName = '${data['firstName'] ?? ''} ${data['lastName'] ?? ''}'.trim();
+          _sponsorName =
+              '${data['firstName'] ?? ''} ${data['lastName'] ?? ''}'.trim();
           _referredBy = code;
           _role = null;
         });
@@ -93,7 +95,8 @@ class _NewRegistrationScreenState extends State<NewRegistrationScreen> {
 
   Future<int> _getReferrerLevel(String? referralCode) async {
     if (referralCode == null || referralCode.isEmpty) return 1;
-    final referrer = await FirestoreService().getUserByReferralCode(referralCode);
+    final referrer =
+        await FirestoreService().getUserByReferralCode(referralCode);
     if (referrer != null && referrer.level != null) {
       return referrer.level! + 1;
     }
@@ -121,9 +124,8 @@ class _NewRegistrationScreenState extends State<NewRegistrationScreen> {
       final qualified = userDoc.qualifiedDate != null;
 
       if (!isAdmin && !qualified && direct >= directMin && total >= totalMin) {
-        await FirestoreService().updateUser(currentUid, {
-          'qualified_date': FieldValue.serverTimestamp()
-        });
+        await FirestoreService().updateUser(
+            currentUid, {'qualified_date': FieldValue.serverTimestamp()});
       }
       currentUid = userDoc.referredBy;
     }
@@ -193,54 +195,66 @@ class _NewRegistrationScreenState extends State<NewRegistrationScreen> {
               if (_sponsorName != null)
                 Padding(
                   padding: const EdgeInsets.only(bottom: 12.0),
-                  child: Text('Your Sponsor is $_sponsorName', style: const TextStyle(fontWeight: FontWeight.bold)),
+                  child: Text('Your Sponsor is $_sponsorName',
+                      style: const TextStyle(fontWeight: FontWeight.bold)),
                 )
               else if (_role == 'admin')
                 const Padding(
                   padding: EdgeInsets.only(bottom: 12.0),
-                  child: Text('You are creating your own TeamBuild Pro organization.', style: TextStyle(fontWeight: FontWeight.bold)),
+                  child: Text(
+                      'You are creating your own TeamBuild Pro organization.',
+                      style: TextStyle(fontWeight: FontWeight.bold)),
                 ),
               TextFormField(
                 controller: _firstNameController,
                 decoration: const InputDecoration(labelText: 'First Name'),
-                validator: (value) => value == null || value.isEmpty ? 'Enter your first name' : null,
+                validator: (value) => value == null || value.isEmpty
+                    ? 'Enter your first name'
+                    : null,
               ),
               const SizedBox(height: 12),
               TextFormField(
                 controller: _lastNameController,
                 decoration: const InputDecoration(labelText: 'Last Name'),
-                validator: (value) => value == null || value.isEmpty ? 'Enter your last name' : null,
+                validator: (value) => value == null || value.isEmpty
+                    ? 'Enter your last name'
+                    : null,
               ),
               const SizedBox(height: 12),
               TextFormField(
                 controller: _emailController,
                 decoration: const InputDecoration(labelText: 'Email'),
                 keyboardType: TextInputType.emailAddress,
-                validator: (value) =>
-                    value == null || !value.contains('@') ? 'Enter a valid email' : null,
+                validator: (value) => value == null || !value.contains('@')
+                    ? 'Enter a valid email'
+                    : null,
               ),
               const SizedBox(height: 12),
               TextFormField(
                 controller: _passwordController,
                 decoration: const InputDecoration(labelText: 'Password'),
                 obscureText: true,
-                validator: (value) =>
-                    value == null || value.length < 6 ? 'Password must be at least 6 characters' : null,
+                validator: (value) => value == null || value.length < 6
+                    ? 'Password must be at least 6 characters'
+                    : null,
               ),
               const SizedBox(height: 12),
               TextFormField(
                 controller: _confirmPasswordController,
-                decoration: const InputDecoration(labelText: 'Confirm Password'),
+                decoration:
+                    const InputDecoration(labelText: 'Confirm Password'),
                 obscureText: true,
-                validator: (value) =>
-                    value != _passwordController.text ? 'Passwords do not match' : null,
+                validator: (value) => value != _passwordController.text
+                    ? 'Passwords do not match'
+                    : null,
               ),
               const SizedBox(height: 12),
               DropdownButtonFormField<String>(
                 value: _selectedCountry,
                 hint: const Text('Select Country'),
                 items: statesByCountry.keys
-                    .map((country) => DropdownMenuItem(value: country, child: Text(country)))
+                    .map((country) =>
+                        DropdownMenuItem(value: country, child: Text(country)))
                     .toList(),
                 onChanged: (value) => setState(() {
                   _selectedCountry = value;
@@ -252,7 +266,8 @@ class _NewRegistrationScreenState extends State<NewRegistrationScreen> {
               DropdownButtonFormField<String>(
                 value: _selectedState,
                 items: states
-                    .map((state) => DropdownMenuItem(value: state, child: Text(state)))
+                    .map((state) =>
+                        DropdownMenuItem(value: state, child: Text(state)))
                     .toList(),
                 onChanged: (value) => setState(() => _selectedState = value),
                 decoration: const InputDecoration(labelText: 'State/Province'),
@@ -261,7 +276,8 @@ class _NewRegistrationScreenState extends State<NewRegistrationScreen> {
               TextFormField(
                 controller: _cityController,
                 decoration: const InputDecoration(labelText: 'City'),
-                validator: (value) => value == null || value.isEmpty ? 'Enter your city' : null,
+                validator: (value) =>
+                    value == null || value.isEmpty ? 'Enter your city' : null,
               ),
               const SizedBox(height: 24),
               SizedBox(

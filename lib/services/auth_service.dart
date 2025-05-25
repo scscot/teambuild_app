@@ -9,7 +9,8 @@ class AuthService {
 
   Future<UserModel> login(String email, String password) async {
     try {
-      final result = await _auth.signInWithEmailAndPassword(email: email, password: password);
+      final result = await _auth.signInWithEmailAndPassword(
+          email: email, password: password);
       final uid = result.user?.uid;
       if (uid == null) throw Exception('User ID not found after login.');
 
@@ -26,12 +27,14 @@ class AuthService {
 
   Future<UserModel> register(String email, String password) async {
     try {
-      final result = await _auth.createUserWithEmailAndPassword(email: email, password: password);
+      final result = await _auth.createUserWithEmailAndPassword(
+          email: email, password: password);
       final uid = result.user?.uid;
       if (uid == null) throw Exception('User ID not found after registration.');
 
       final user = await FirestoreService().getUser(uid);
-      if (user == null) throw Exception('User not found in Firestore after registration.');
+      if (user == null)
+        throw Exception('User not found in Firestore after registration.');
 
       print('✅ AuthService — Registration success. UID: $uid');
       return user;

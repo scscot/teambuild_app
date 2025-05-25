@@ -87,13 +87,15 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
                   TextFormField(
                     controller: _firstNameController,
                     decoration: const InputDecoration(labelText: 'First Name'),
-                    validator: (value) => value == null || value.isEmpty ? 'Required' : null,
+                    validator: (value) =>
+                        value == null || value.isEmpty ? 'Required' : null,
                   ),
                   const SizedBox(height: 12),
                   TextFormField(
                     controller: _lastNameController,
                     decoration: const InputDecoration(labelText: 'Last Name'),
-                    validator: (value) => value == null || value.isEmpty ? 'Required' : null,
+                    validator: (value) =>
+                        value == null || value.isEmpty ? 'Required' : null,
                   ),
                   const SizedBox(height: 12),
                   TextFormField(
@@ -106,7 +108,8 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
                     hint: const Text('Select Country'),
                     decoration: const InputDecoration(labelText: 'Country'),
                     items: statesByCountry.keys
-                        .map((country) => DropdownMenuItem(value: country, child: Text(country)))
+                        .map((country) => DropdownMenuItem(
+                            value: country, child: Text(country)))
                         .toList(),
                     onChanged: (value) => setState(() {
                       _selectedCountry = value;
@@ -116,11 +119,14 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
                   const SizedBox(height: 12),
                   DropdownButtonFormField<String>(
                     value: _selectedState,
-                    decoration: const InputDecoration(labelText: 'State/Province'),
+                    decoration:
+                        const InputDecoration(labelText: 'State/Province'),
                     items: states
-                        .map((state) => DropdownMenuItem(value: state, child: Text(state)))
+                        .map((state) =>
+                            DropdownMenuItem(value: state, child: Text(state)))
                         .toList(),
-                    onChanged: (value) => setState(() => _selectedState = value),
+                    onChanged: (value) =>
+                        setState(() => _selectedState = value),
                   ),
                   const SizedBox(height: 24),
                   SizedBox(

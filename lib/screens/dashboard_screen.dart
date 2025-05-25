@@ -39,7 +39,10 @@ class _DashboardScreenState extends State<DashboardScreen> {
     }
 
     try {
-      final userDoc = await FirebaseFirestore.instance.collection('users').doc(sessionUser.uid).get();
+      final userDoc = await FirebaseFirestore.instance
+          .collection('users')
+          .doc(sessionUser.uid)
+          .get();
       final updatedUser = UserModel.fromFirestore(userDoc);
 
       final adminSettings = await FirebaseFirestore.instance
@@ -47,7 +50,8 @@ class _DashboardScreenState extends State<DashboardScreen> {
           .doc('global')
           .get();
 
-      final int directSponsorMin = adminSettings.data()?['direct_sponsor_min'] ?? 1;
+      final int directSponsorMin =
+          adminSettings.data()?['direct_sponsor_min'] ?? 1;
       final int totalTeamMin = adminSettings.data()?['total_team_min'] ?? 1;
 
       print('🔎 Firestore values:');
@@ -121,7 +125,8 @@ class _DashboardScreenState extends State<DashboardScreen> {
                   onPressed: () {
                     Navigator.push(
                       context,
-                      MaterialPageRoute(builder: (_) => const JoinOpportunityScreen()),
+                      MaterialPageRoute(
+                          builder: (_) => const JoinOpportunityScreen()),
                     );
                   },
                 ),
@@ -152,7 +157,8 @@ class _DashboardScreenState extends State<DashboardScreen> {
                 Navigator.push(
                   context,
                   MaterialPageRoute(
-                    builder: (_) => const DownlineTeamScreen(referredBy: 'demo-user'),
+                    builder: (_) =>
+                        const DownlineTeamScreen(referredBy: 'demo-user'),
                   ),
                 );
               },

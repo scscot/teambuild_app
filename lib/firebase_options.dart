@@ -64,7 +64,8 @@ class DefaultFirebaseOptions {
     messagingSenderId: '312163687148',
     projectId: 'teambuilder-plus-fe74d',
     storageBucket: 'teambuilder-plus-fe74d.firebasestorage.app',
-    iosClientId: '312163687148-1di7hi57husi4s9pcn74hd2ndo2d59ss.apps.googleusercontent.com',
+    iosClientId:
+        '312163687148-1di7hi57husi4s9pcn74hd2ndo2d59ss.apps.googleusercontent.com',
     iosBundleId: 'com.scott.teambuildApp',
   );
 
@@ -74,7 +75,8 @@ class DefaultFirebaseOptions {
     messagingSenderId: '312163687148',
     projectId: 'teambuilder-plus-fe74d',
     storageBucket: 'teambuilder-plus-fe74d.firebasestorage.app',
-    iosClientId: '312163687148-5lj9aiqok14grs444lqpcs7ohpbqg799.apps.googleusercontent.com',
+    iosClientId:
+        '312163687148-5lj9aiqok14grs444lqpcs7ohpbqg799.apps.googleusercontent.com',
     iosBundleId: 'com.example.tbp',
   );
 

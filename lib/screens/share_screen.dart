@@ -6,7 +6,8 @@ class ShareScreen extends StatelessWidget {
   const ShareScreen({super.key});
 
   void _shareInviteLink() {
-    Share.share('Join me on TeamBuild Pro: https://teambuildpro.com/invite/abc123');
+    Share.share(
+        'Join me on TeamBuild Pro: https://teambuildpro.com/invite/abc123');
   }
 
   @override
@@ -25,7 +26,8 @@ class ShareScreen extends StatelessWidget {
                   const Center(
                     child: Text(
                       'Share Your Link',
-                      style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
+                      style:
+                          TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
                     ),
                   ),
                   const SizedBox(height: 24),

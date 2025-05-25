@@ -64,19 +64,15 @@ class _DownlineTeamScreenState extends State<DownlineTeamScreen> {
 
   bool userMatchesSearch(UserModel user) {
     final query = _searchQuery.toLowerCase();
-    return [
-      user.firstName,
-      user.lastName,
-      user.city,
-      user.state,
-      user.country
-    ].any((field) => field != null && field.toLowerCase().contains(query));
+    return [user.firstName, user.lastName, user.city, user.state, user.country]
+        .any((field) => field != null && field.toLowerCase().contains(query));
   }
 
   Future<void> fetchDownline() async {
     setState(() => isLoading = true);
     try {
-      final snapshot = await FirebaseFirestore.instance.collection('users').get();
+      final snapshot =
+          await FirebaseFirestore.instance.collection('users').get();
       allUsers = snapshot.docs.map((doc) {
         final data = doc.data();
         return UserModel(
@@ -124,23 +120,32 @@ class _DownlineTeamScreenState extends State<DownlineTeamScreen> {
             if (joined != null) {
               final joinedDate = joined;
               if (joinedDate.isAfter(now.subtract(const Duration(days: 1)))) {
-                downlineCounts[JoinWindow.last24] = downlineCounts[JoinWindow.last24]! + 1;
+                downlineCounts[JoinWindow.last24] =
+                    downlineCounts[JoinWindow.last24]! + 1;
               }
               if (joinedDate.isAfter(now.subtract(const Duration(days: 7)))) {
-                downlineCounts[JoinWindow.last7] = downlineCounts[JoinWindow.last7]! + 1;
+                downlineCounts[JoinWindow.last7] =
+                    downlineCounts[JoinWindow.last7]! + 1;
               }
               if (joinedDate.isAfter(now.subtract(const Duration(days: 30)))) {
-                downlineCounts[JoinWindow.last30] = downlineCounts[JoinWindow.last30]! + 1;
+                downlineCounts[JoinWindow.last30] =
+                    downlineCounts[JoinWindow.last30]! + 1;
               }
             }
-            downlineCounts[JoinWindow.all] = downlineCounts[JoinWindow.all]! + 1;
+            downlineCounts[JoinWindow.all] =
+                downlineCounts[JoinWindow.all]! + 1;
 
             if (selectedJoinWindow == JoinWindow.none ||
                 selectedJoinWindow == JoinWindow.all ||
-                (selectedJoinWindow == JoinWindow.last24 && joined != null && joined.isAfter(now.subtract(const Duration(days: 1)))) ||
-                (selectedJoinWindow == JoinWindow.last7 && joined != null && joined.isAfter(now.subtract(const Duration(days: 7)))) ||
-                (selectedJoinWindow == JoinWindow.last30 && joined != null && joined.isAfter(now.subtract(const Duration(days: 30))))) {
-
+                (selectedJoinWindow == JoinWindow.last24 &&
+                    joined != null &&
+                    joined.isAfter(now.subtract(const Duration(days: 1)))) ||
+                (selectedJoinWindow == JoinWindow.last7 &&
+                    joined != null &&
+                    joined.isAfter(now.subtract(const Duration(days: 7)))) ||
+                (selectedJoinWindow == JoinWindow.last30 &&
+                    joined != null &&
+                    joined.isAfter(now.subtract(const Duration(days: 30))))) {
               if (_searchQuery.isEmpty || userMatchesSearch(user)) {
                 grouped.putIfAbsent(user.level!, () => []).add(user);
               }
@@ -156,12 +161,13 @@ class _DownlineTeamScreenState extends State<DownlineTeamScreen> {
       collect(currentRefCode);
 
       grouped.forEach((level, users) {
-        users.sort((a, b) => b.joined?.compareTo(a.joined ?? DateTime(1970)) ?? 0);
+        users.sort(
+            (a, b) => b.joined?.compareTo(a.joined ?? DateTime(1970)) ?? 0);
       });
 
       setState(() {
-        downlineByLevel = Map.fromEntries(grouped.entries.toList()
-          ..sort((a, b) => a.key.compareTo(b.key)));
+        downlineByLevel = Map.fromEntries(
+            grouped.entries.toList()..sort((a, b) => a.key.compareTo(b.key)));
       });
     } catch (e) {
       debugPrint('Error loading downline: $e');
@@ -198,11 +204,11 @@ class _DownlineTeamScreenState extends State<DownlineTeamScreen> {
                   child: Center(
                     child: Text(
                       'Downline Team',
-                      style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
+                      style:
+                          TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
                     ),
                   ),
                 ),
-
                 Padding(
                   padding: const EdgeInsets.fromLTRB(16, 16, 16, 8),
                   child: DropdownButton<JoinWindow>(
@@ -237,9 +243,9 @@ class _DownlineTeamScreenState extends State<DownlineTeamScreen> {
                     child: TextField(
                       controller: _searchController,
                       decoration: const InputDecoration(
-                      labelText: 'Search by name, country, state, city, etc.',
-                      prefixIcon: Icon(Icons.search),
-                      border: OutlineInputBorder(),
+                        labelText: 'Search by name, country, state, city, etc.',
+                        prefixIcon: Icon(Icons.search),
+                        border: OutlineInputBorder(),
                       ),
                       onChanged: (value) {
                         setState(() => _searchQuery = value);
@@ -264,45 +270,62 @@ class _DownlineTeamScreenState extends State<DownlineTeamScreen> {
                             children: [
                               const Divider(thickness: 1),
                               Padding(
-                                padding: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 10),
+                                padding: const EdgeInsets.symmetric(
+                                    horizontal: 16.0, vertical: 10),
                                 child: Text(
                                   'Level $adjustedLevel (${users.length})',
-                                  style: const TextStyle(fontSize: 14, fontWeight: FontWeight.bold, color: Colors.blue),
+                                  style: const TextStyle(
+                                      fontSize: 14,
+                                      fontWeight: FontWeight.bold,
+                                      color: Colors.blue),
                                 ),
                               ),
                               ...users.map((user) {
                                 final index = localIndex++;
-                                final spaceCount = index < 10 ? 4 : index < 100 ? 6 : 7;
+                                final spaceCount = index < 10
+                                    ? 4
+                                    : index < 100
+                                        ? 6
+                                        : 7;
                                 return Padding(
-                                  padding: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 8),
+                                  padding: const EdgeInsets.symmetric(
+                                      horizontal: 16.0, vertical: 8),
                                   child: Column(
-                                    crossAxisAlignment: CrossAxisAlignment.start,
+                                    crossAxisAlignment:
+                                        CrossAxisAlignment.start,
                                     children: [
                                       Row(
                                         children: [
                                           Text(
                                             '$index) ',
-                                            style: const TextStyle(fontWeight: FontWeight.normal),
+                                            style: const TextStyle(
+                                                fontWeight: FontWeight.normal),
                                           ),
                                           GestureDetector(
                                             onTap: () {
                                               Navigator.push(
                                                 context,
                                                 MaterialPageRoute(
-                                                  builder: (_) => MemberDetailScreen(userId: user.uid),
+                                                  builder: (_) =>
+                                                      MemberDetailScreen(
+                                                          userId: user.uid),
                                                 ),
                                               );
                                             },
                                             child: Text(
                                               '${user.firstName ?? ''} ${user.lastName ?? ''}',
-                                              style: const TextStyle(color: Colors.blue, decoration: TextDecoration.underline),
+                                              style: const TextStyle(
+                                                  color: Colors.blue,
+                                                  decoration:
+                                                      TextDecoration.underline),
                                             ),
                                           ),
                                         ],
                                       ),
                                       Text(
                                         '${' ' * spaceCount}${user.city ?? ''}, ${user.state ?? ''} – ${user.country ?? ''}',
-                                        style: const TextStyle(fontWeight: FontWeight.normal),
+                                        style: const TextStyle(
+                                            fontWeight: FontWeight.normal),
                                       ),
                                     ],
                                   ),

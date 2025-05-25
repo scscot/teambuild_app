@@ -32,19 +32,23 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
             const SizedBox(height: 32),
             ElevatedButton(
               onPressed: () {
-                Navigator.push(context, MaterialPageRoute(
-                  builder: (_) => const LoginScreen(),
-                ));
+                Navigator.push(
+                    context,
+                    MaterialPageRoute(
+                      builder: (_) => const LoginScreen(),
+                    ));
               },
               child: const Text('Login'),
             ),
             ElevatedButton(
               onPressed: () {
-                Navigator.push(context, MaterialPageRoute(
-                  builder: (_) => NewRegistrationScreen(
-                    firestoreService: firestoreService,
-                  ),
-                ));
+                Navigator.push(
+                    context,
+                    MaterialPageRoute(
+                      builder: (_) => NewRegistrationScreen(
+                        firestoreService: firestoreService,
+                      ),
+                    ));
               },
               child: const Text('Create Account'),
             ),

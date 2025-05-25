@@ -19,7 +19,8 @@ class BiometricAuthService {
     try {
       return await _auth.authenticate(
         localizedReason: 'Please authenticate to continue',
-        options: const AuthenticationOptions(biometricOnly: true, stickyAuth: true),
+        options:
+            const AuthenticationOptions(biometricOnly: true, stickyAuth: true),
       );
     } catch (e) {
       debugPrint('❌ Biometric auth error: $e');

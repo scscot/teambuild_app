@@ -7,16 +7,13 @@ class SessionManager {
   static const String _biometricKey = 'biometric_enabled';
   static const String _logoutTimeKey = 'last_logout_time';
 
-  // PATCH START: Unified and debug-enhanced session setter
   Future<void> setCurrentUser(UserModel user) async {
     final prefs = await SharedPreferences.getInstance();
     final userMap = jsonEncode(user.toMap());
     await prefs.setString(_userKey, userMap);
     print('📂 SessionManager — User session saved with UID: ${user.uid}');
   }
-  // PATCH END
 
-  // PATCH START: Hydrated session reader with UID verification
   Future<UserModel?> getCurrentUser() async {
     final prefs = await SharedPreferences.getInstance();
     final userData = prefs.getString(_userKey);
@@ -38,7 +35,6 @@ class SessionManager {
       return null;
     }
   }
-  // PATCH END
 
   Future<void> clearSession() async {
     final prefs = await SharedPreferences.getInstance();

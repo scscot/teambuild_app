@@ -18,8 +18,8 @@ class AppUserModel {
   }
 
   Map<String, dynamic> toJson() => {
-    'email': email,
-    'name': name,
-    'role': role,
-  };
+        'email': email,
+        'name': name,
+        'role': role,
+      };
 }

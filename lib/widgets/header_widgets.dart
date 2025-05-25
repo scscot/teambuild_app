@@ -34,7 +34,10 @@ class _AppHeaderWithMenuState extends State<AppHeaderWithMenu> {
     if (user == null || user.role == 'admin') return;
 
     try {
-      final userDoc = await FirebaseFirestore.instance.collection('users').doc(user.uid).get();
+      final userDoc = await FirebaseFirestore.instance
+          .collection('users')
+          .doc(user.uid)
+          .get();
       final data = userDoc.data();
       if (data == null) return;
 
@@ -44,7 +47,9 @@ class _AppHeaderWithMenuState extends State<AppHeaderWithMenu> {
       final directCount = data['direct_sponsor_count'] ?? 0;
       final teamCount = data['total_team_count'] ?? 0;
 
-      if (bizJoinDate == null && directCount >= directSponsorMin && teamCount >= totalTeamMin) {
+      if (bizJoinDate == null &&
+          directCount >= directSponsorMin &&
+          teamCount >= totalTeamMin) {
         setState(() => showJoinOpportunity = true);
       }
     } catch (e) {
@@ -54,7 +59,8 @@ class _AppHeaderWithMenuState extends State<AppHeaderWithMenu> {
 
   @override
   Widget build(BuildContext context) {
-    final isLoginScreen = context.findAncestorWidgetOfExactType<LoginScreen>() != null;
+    final isLoginScreen =
+        context.findAncestorWidgetOfExactType<LoginScreen>() != null;
 
     return AppBar(
       backgroundColor: const Color(0xFFEDE7F6),
@@ -72,19 +78,33 @@ class _AppHeaderWithMenuState extends State<AppHeaderWithMenu> {
                 onSelected: (String value) async {
                   switch (value) {
                     case 'dashboard':
-                      Navigator.push(context, MaterialPageRoute(builder: (_) => const DashboardScreen()));
+                      Navigator.push(
+                          context,
+                          MaterialPageRoute(
+                              builder: (_) => const DashboardScreen()));
                       break;
                     case 'profile':
-                      Navigator.push(context, MaterialPageRoute(builder: (_) => const ProfileScreen()));
+                      Navigator.push(
+                          context,
+                          MaterialPageRoute(
+                              builder: (_) => const ProfileScreen()));
                       break;
                     case 'downline':
-                      Navigator.push(context, MaterialPageRoute(builder: (_) => const DownlineTeamScreen(referredBy: 'demo-user')));
+                      Navigator.push(
+                          context,
+                          MaterialPageRoute(
+                              builder: (_) => const DownlineTeamScreen(
+                                  referredBy: 'demo-user')));
                       break;
                     case 'share':
-                      Navigator.push(context, MaterialPageRoute(builder: (_) => ShareScreen()));
+                      Navigator.push(context,
+                          MaterialPageRoute(builder: (_) => ShareScreen()));
                       break;
                     case 'join':
-                      Navigator.push(context, MaterialPageRoute(builder: (_) => const JoinOpportunityScreen()));
+                      Navigator.push(
+                          context,
+                          MaterialPageRoute(
+                              builder: (_) => const JoinOpportunityScreen()));
                       break;
                     case 'logout':
                       await SessionManager().clearSession();

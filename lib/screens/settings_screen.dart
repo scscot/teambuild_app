@@ -15,9 +15,11 @@ class SettingsScreen extends StatefulWidget {
 class _SettingsScreenState extends State<SettingsScreen> {
   final _formKey = GlobalKey<FormState>();
   final TextEditingController _bizNameController = TextEditingController();
-  final TextEditingController _bizNameConfirmController = TextEditingController();
+  final TextEditingController _bizNameConfirmController =
+      TextEditingController();
   final TextEditingController _refLinkController = TextEditingController();
-  final TextEditingController _refLinkConfirmController = TextEditingController();
+  final TextEditingController _refLinkConfirmController =
+      TextEditingController();
 
   List<String> _selectedCountries = [];
   bool _selectAllCountries = false;
@@ -49,7 +51,8 @@ class _SettingsScreenState extends State<SettingsScreen> {
   Future<void> _loadUserSettings() async {
     final uid = FirebaseAuth.instance.currentUser?.uid;
     if (uid == null) return;
-    final doc = await FirebaseFirestore.instance.collection('users').doc(uid).get();
+    final doc =
+        await FirebaseFirestore.instance.collection('users').doc(uid).get();
     final data = doc.data();
     if (data != null) {
       final country = data['country'];
@@ -99,7 +102,8 @@ class _SettingsScreenState extends State<SettingsScreen> {
     });
 
     await _loadUserSettings();
-    Scrollable.ensureVisible(_formKey.currentContext ?? context, duration: Duration(milliseconds: 300));
+    Scrollable.ensureVisible(_formKey.currentContext ?? context,
+        duration: Duration(milliseconds: 300));
 
     ScaffoldMessenger.of(context).showSnackBar(
       const SnackBar(content: Text('Settings saved successfully.')),
@@ -133,44 +137,54 @@ class _SettingsScreenState extends State<SettingsScreen> {
               ),
               const SizedBox(height: 16),
               if (_isLocked && _bizOpp != null && _bizRefUrl != null) ...[
-                const Text('Business Opportunity Name', style: TextStyle(fontWeight: FontWeight.bold)),
+                const Text('Business Opportunity Name',
+                    style: TextStyle(fontWeight: FontWeight.bold)),
                 Text(_bizOpp!, style: const TextStyle(fontSize: 16)),
                 const SizedBox(height: 8),
-                const Text('Your Unique Referral Link', style: TextStyle(fontWeight: FontWeight.bold)),
+                const Text('Your Unique Referral Link',
+                    style: TextStyle(fontWeight: FontWeight.bold)),
                 Text(_bizRefUrl!, style: const TextStyle(fontSize: 16)),
               ] else ...[
-                const Text("Enter the name of your business opportunity. You can set this only once, and it cannot be changed later."),
+                const Text(
+                    "Enter the name of your business opportunity. You can set this only once, and it cannot be changed later."),
                 TextFormField(
                   controller: _bizNameController,
                   enabled: !_isLocked,
-                  decoration: const InputDecoration(labelText: 'Business Opportunity Name'),
+                  decoration: const InputDecoration(
+                      labelText: 'Business Opportunity Name'),
                   validator: (value) => value!.isEmpty ? 'Required' : null,
                 ),
                 TextFormField(
                   controller: _bizNameConfirmController,
                   enabled: !_isLocked,
-                  decoration: const InputDecoration(labelText: 'Confirm Business Opportunity Name'),
+                  decoration: const InputDecoration(
+                      labelText: 'Confirm Business Opportunity Name'),
                   validator: (value) => value!.isEmpty ? 'Required' : null,
                 ),
                 const SizedBox(height: 16),
-                const Text("Enter your unique business opportunity referral link. You can set this only once, and it cannot be changed later."),
+                const Text(
+                    "Enter your unique business opportunity referral link. You can set this only once, and it cannot be changed later."),
                 TextFormField(
                   controller: _refLinkController,
                   enabled: !_isLocked,
-                  decoration: const InputDecoration(labelText: 'Your Unique Referral Link URL'),
+                  decoration: const InputDecoration(
+                      labelText: 'Your Unique Referral Link URL'),
                   validator: (value) => value!.isEmpty ? 'Required' : null,
                 ),
                 TextFormField(
                   controller: _refLinkConfirmController,
                   enabled: !_isLocked,
-                  decoration: const InputDecoration(labelText: 'Confirm Referral Link URL'),
+                  decoration: const InputDecoration(
+                      labelText: 'Confirm Referral Link URL'),
                   validator: (value) => value!.isEmpty ? 'Required' : null,
                 ),
               ],
               const SizedBox(height: 24),
-              const Text('Available Countries', style: TextStyle(fontWeight: FontWeight.bold)),
+              const Text('Available Countries',
+                  style: TextStyle(fontWeight: FontWeight.bold)),
               const SizedBox(height: 4),
-              const Text("Select the countries where your business opportunity is currently available."),
+              const Text(
+                  "Select the countries where your business opportunity is currently available."),
               CheckboxListTile(
                 title: const Text('Select All Countries'),
                 value: _selectAllCountries,
@@ -180,14 +194,17 @@ class _SettingsScreenState extends State<SettingsScreen> {
                     if (_selectAllCountries) {
                       _selectedCountries = List.from(allCountries);
                     } else {
-                      _selectedCountries = List.from(_originalSelectedCountries);
+                      _selectedCountries =
+                          List.from(_originalSelectedCountries);
                     }
                   });
                 },
               ),
               // PATCH START: Replace FilterChip layout with multi-select modal
               MultiSelectDialogField<String>(
-                items: allCountries.map((e) => MultiSelectItem<String>(e, e)).toList(),
+                items: allCountries
+                    .map((e) => MultiSelectItem<String>(e, e))
+                    .toList(),
                 initialValue: _selectedCountries,
                 title: const Text("Countries"),
                 buttonText: const Text("Select Individual Countries"),
@@ -200,15 +217,17 @@ class _SettingsScreenState extends State<SettingsScreen> {
               ),
               // PATCH END
               const SizedBox(height: 24),
-              const Text('Eligibility Requirements', style: TextStyle(fontWeight: FontWeight.bold)),
+              const Text('Eligibility Requirements',
+                  style: TextStyle(fontWeight: FontWeight.bold)),
               const SizedBox(height: 4),
               Text(
-                  "Once a downline member meets the minimum direct sponsor and total team size criteria, they'll receive an invitation and referral link to join ${_bizOpp ?? 'your business opportunity'}.",
-                ),
+                "Once a downline member meets the minimum direct sponsor and total team size criteria, they'll receive an invitation and referral link to join ${_bizOpp ?? 'your business opportunity'}.",
+              ),
 
               TextFormField(
                 initialValue: _directSponsorMin.toString(),
-                decoration: const InputDecoration(labelText: 'Minimum Direct Sponsors'),
+                decoration:
+                    const InputDecoration(labelText: 'Minimum Direct Sponsors'),
                 keyboardType: TextInputType.number,
                 onChanged: (value) {
                   setState(() {
@@ -218,7 +237,8 @@ class _SettingsScreenState extends State<SettingsScreen> {
               ),
               TextFormField(
                 initialValue: _totalTeamMin.toString(),
-                decoration: const InputDecoration(labelText: 'Minimum Total Team Members'),
+                decoration: const InputDecoration(
+                    labelText: 'Minimum Total Team Members'),
                 keyboardType: TextInputType.number,
                 onChanged: (value) {
                   setState(() {

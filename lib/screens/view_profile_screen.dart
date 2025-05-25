@@ -50,8 +50,10 @@ class ViewProfileScreen extends StatelessWidget {
           Center(
             child: CircleAvatar(
               radius: 50,
-              backgroundImage: avatarUrl != null ? NetworkImage(avatarUrl!) : null,
-              child: avatarUrl == null ? const Icon(Icons.person, size: 50) : null,
+              backgroundImage:
+                  avatarUrl != null ? NetworkImage(avatarUrl!) : null,
+              child:
+                  avatarUrl == null ? const Icon(Icons.person, size: 50) : null,
             ),
           ),
           const SizedBox(height: 16),
@@ -88,14 +90,16 @@ class ViewProfileScreen extends StatelessWidget {
                   Navigator.push(
                     context,
                     MaterialPageRoute(
-                      builder: (context) => const PlaceholderScreen(title: 'Message Center'),
+                      builder: (context) =>
+                          const PlaceholderScreen(title: 'Message Center'),
                     ),
                   );
                 },
                 icon: const Icon(Icons.message),
                 label: const Text('Message Center'),
                 style: ElevatedButton.styleFrom(
-                  padding: const EdgeInsets.symmetric(vertical: 12, horizontal: 24),
+                  padding:
+                      const EdgeInsets.symmetric(vertical: 12, horizontal: 24),
                 ),
               ),
             ),

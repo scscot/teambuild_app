@@ -1,0 +1,8 @@
+{
+  "[dart]": {
+    "editor.formatOnSave": true,
+    "editor.tabSize": 2
+  },
+  "editor.trimTrailingWhitespace": true,
+  "files.insertFinalNewline": true
+}

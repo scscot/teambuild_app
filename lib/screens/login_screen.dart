@@ -40,21 +40,25 @@ class _LoginScreenState extends State<LoginScreen> {
     if (!enabled) return;
 
     final auth = LocalAuthentication();
-    final canAuth = await auth.canCheckBiometrics && await auth.isDeviceSupported();
+    final canAuth =
+        await auth.canCheckBiometrics && await auth.isDeviceSupported();
     if (!canAuth) return;
 
     try {
       final didAuthenticate = await auth.authenticate(
         localizedReason: 'Please authenticate to login',
-        options: const AuthenticationOptions(biometricOnly: true, stickyAuth: true),
+        options:
+            const AuthenticationOptions(biometricOnly: true, stickyAuth: true),
       );
 
       if (didAuthenticate) {
         final currentUser = FirebaseAuth.instance.currentUser;
         if (currentUser != null && currentUser.uid.isNotEmpty) {
-          final userData = await FirestoreService().getUserData(currentUser.uid);
+          final userData =
+              await FirestoreService().getUserData(currentUser.uid);
           if (userData != null) {
-            final fullUser = UserModel.fromMap(userData).copyWith(uid: currentUser.uid);
+            final fullUser =
+                UserModel.fromMap(userData).copyWith(uid: currentUser.uid);
             await SessionManager().setCurrentUser(fullUser);
             if (mounted) {
               Navigator.pushReplacement(
@@ -110,14 +114,17 @@ class _LoginScreenState extends State<LoginScreen> {
                 controller: _emailController,
                 keyboardType: TextInputType.emailAddress,
                 decoration: const InputDecoration(labelText: 'Email'),
-                validator: (value) => value == null || value.isEmpty ? 'Enter your email' : null,
+                validator: (value) =>
+                    value == null || value.isEmpty ? 'Enter your email' : null,
               ),
               const SizedBox(height: 16),
               TextFormField(
                 controller: _passwordController,
                 obscureText: true,
                 decoration: const InputDecoration(labelText: 'Password'),
-                validator: (value) => value == null || value.isEmpty ? 'Enter your password' : null,
+                validator: (value) => value == null || value.isEmpty
+                    ? 'Enter your password'
+                    : null,
               ),
               const SizedBox(height: 24),
               ElevatedButton(
@@ -132,14 +139,17 @@ class _LoginScreenState extends State<LoginScreen> {
                   final email = _emailController.text.trim();
                   if (email.isEmpty) {
                     ScaffoldMessenger.of(context).showSnackBar(
-                      const SnackBar(content: Text('Please enter your email first.')),
+                      const SnackBar(
+                          content: Text('Please enter your email first.')),
                     );
                     return;
                   }
                   try {
-                    await FirebaseAuth.instance.sendPasswordResetEmail(email: email);
+                    await FirebaseAuth.instance
+                        .sendPasswordResetEmail(email: email);
                     ScaffoldMessenger.of(context).showSnackBar(
-                      const SnackBar(content: Text('Password reset email sent.')),
+                      const SnackBar(
+                          content: Text('Password reset email sent.')),
                     );
                   } catch (e) {
                     ScaffoldMessenger.of(context).showSnackBar(
@@ -154,7 +164,8 @@ class _LoginScreenState extends State<LoginScreen> {
                 onPressed: () {
                   Navigator.push(
                     context,
-                    MaterialPageRoute(builder: (_) => const NewRegistrationScreen()),
+                    MaterialPageRoute(
+                        builder: (_) => const NewRegistrationScreen()),
                   );
                 },
                 child: const Text('Create Account'),

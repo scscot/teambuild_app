@@ -27,7 +27,8 @@ class FirestoreService {
 
   Future<void> updateUser(String uid, Map<String, dynamic> updates) async {
     if (uid.isEmpty) {
-      print('❌ FirestoreService.updateUser — UID is empty. Cannot update user.');
+      print(
+          '❌ FirestoreService.updateUser — UID is empty. Cannot update user.');
       throw ArgumentError('User ID cannot be empty');
     }
     print('📡 FirestoreService.updateUser — Updating UID: $uid');
@@ -35,7 +36,6 @@ class FirestoreService {
     await _firestore.collection('users').doc(uid).update(updates);
   }
 
-  // PATCH START: Add single-field update method
   Future<void> updateUserField(String uid, String field, dynamic value) async {
     try {
       await _firestore.collection('users').doc(uid).update({field: value});
@@ -45,7 +45,6 @@ class FirestoreService {
       rethrow;
     }
   }
-  // PATCH END
 
   Future<String> getUserFullName(String uid) async {
     try {
@@ -100,7 +99,6 @@ class FirestoreService {
     }
   }
 
-  // PATCH START: Add missing method to fetch user by referralCode
   Future<UserModel?> getUserByReferralCode(String code) async {
     try {
       final snapshot = await _firestore
@@ -117,9 +115,7 @@ class FirestoreService {
     }
     return null;
   }
-  // PATCH END
 
-  // PATCH START: Upline counter traversal
   Future<void> incrementUplineCounts(String referralCode) async {
     String? currentCode = referralCode;
     final visited = <String>{};
@@ -148,5 +144,4 @@ class FirestoreService {
       currentCode = data['referredBy'];
     }
   }
-  // PATCH END
-} 
+}

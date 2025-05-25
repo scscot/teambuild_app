@@ -18,8 +18,8 @@ class MessageModel {
   }
 
   Map<String, dynamic> toJson() => {
-    'senderId': senderId,
-    'content': content,
-    'timestamp': timestamp.toIso8601String(),
-  };
+        'senderId': senderId,
+        'content': content,
+        'timestamp': timestamp.toIso8601String(),
+      };
 }

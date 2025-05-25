@@ -32,7 +32,8 @@ class MyApp extends StatelessWidget {
         future: _determineStartScreen(),
         builder: (context, snapshot) {
           if (snapshot.connectionState == ConnectionState.waiting) {
-            return const Scaffold(body: Center(child: CircularProgressIndicator()));
+            return const Scaffold(
+                body: Center(child: CircularProgressIndicator()));
           } else {
             return snapshot.data ?? const LoginScreen();
           }

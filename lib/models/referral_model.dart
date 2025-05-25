@@ -18,8 +18,8 @@ class ReferralModel {
   }
 
   Map<String, dynamic> toJson() => {
-    'referredBy': referredBy,
-    'referredUser': referredUser,
-    'referredAt': referredAt.toIso8601String(),
-  };
+        'referredBy': referredBy,
+        'referredUser': referredUser,
+        'referredAt': referredAt.toIso8601String(),
+      };
 }
