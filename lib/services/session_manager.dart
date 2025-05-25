@@ -68,16 +68,20 @@ class SessionManager {
     return isoTime != null ? DateTime.tryParse(isoTime) : null;
   }
 
-  // PATCH START: Add cooldown logic for biometric login
   Future<bool> isLogoutCooldownActive(int minutes) async {
     final lastLogout = await getLastLogoutTime();
     if (lastLogout == null) return false;
     final elapsed = DateTime.now().difference(lastLogout);
     return elapsed.inMinutes < minutes;
   }
-  // PATCH END
 
   Future<bool> getBiometricEnabled() async {
     return isBiometricEnabled();
   }
+
+  // PATCH START: alias for compatibility with FirebaseAuthService
+  Future<void> saveSession(UserModel user) async {
+    await setCurrentUser(user);
+  }
+  // PATCH END
 }

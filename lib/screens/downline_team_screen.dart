@@ -6,10 +6,8 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import '../models/user_model.dart';
 
-
 import '../screens/member_detail_screen.dart';
 import '../widgets/header_widgets.dart';
-
 
 enum JoinWindow {
   none,
@@ -188,7 +186,6 @@ class _DownlineTeamScreenState extends State<DownlineTeamScreen> {
       case JoinWindow.all:
         return 'All Team Members (${downlineCounts[JoinWindow.all]})';
       case JoinWindow.none:
-      default:
         return 'Select Downline Report';
     }
   }
@@ -335,7 +332,7 @@ class _DownlineTeamScreenState extends State<DownlineTeamScreen> {
                               })
                             ],
                           );
-                        }).toList(),
+                        }),
                       ],
                     ),
                   ),

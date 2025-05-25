@@ -1,6 +1,6 @@
 // PATCH START: fix countryStateMap reference by importing and using statesByCountry
 import 'package:flutter/material.dart';
-import 'package:intl/intl.dart';
+
 import '../models/user_model.dart';
 import '../services/firestore_service.dart';
 import '../services/session_manager.dart';

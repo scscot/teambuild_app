@@ -1,87 +1,39 @@
-// lib/screens/home_page.dart
 import 'package:flutter/material.dart';
-import '../services/auth_service.dart';
-import '../services/firestore_service.dart';
-import '../models/app_user_model.dart';
-import 'sign_in_screen.dart';
-import 'package:flutter/foundation.dart';
-class HomePage extends StatefulWidget {
-  final String email;
 
-  HomePage({required this.email});
+// PATCH START: Temporary HeaderWidget placeholder
+class HeaderWidget extends StatelessWidget {
+  const HeaderWidget({super.key});
 
   @override
-  _HomePageState createState() => _HomePageState();
-}
-
-class _HomePageState extends State<HomePage> {
-  final FirestoreService _firestoreService = FirestoreService();
-  final AuthService _authService = AuthService();
-
-  AppUserModel? _user;
-  bool _loading = true;
-
-  @override
-  void initState() {
-    super.initState();
-    debugPrint('⚠️ HomePage initState triggered');
-    debugPrint('🧪 HomePage attempting to load user with email: ${widget.email}');
-    _loadUserProfile();
-  }
-
-  Future<void> _loadUserProfile() async {
-    final user = await _firestoreService.getUserByEmail(widget.email);
-    setState(() {
-      _user = user;
-      _loading = false;
-    });
-  }
-
-  Future<void> _signOut() async {
-    await _authService.signOut();
-    Navigator.of(context).pushReplacement(
-      MaterialPageRoute(builder: (_) => SignInScreen()),
+  Widget build(BuildContext context) {
+    return Text(
+      'Header',
+      style: Theme.of(context).textTheme.headlineSmall,
     );
   }
+}
+// PATCH END
+
+class HomePage extends StatelessWidget {
+  const HomePage({super.key});
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(
-        title: const Text('TeamBuilder+ Home'),
-        actions: [
-          IconButton(
-            icon: const Icon(Icons.logout),
-            tooltip: 'Sign Out',
-            onPressed: _signOut,
-          )
-        ],
-      ),
-      body: Center(
-        child: _loading
-            ? CircularProgressIndicator()
-            : _user == null
-                ? const Text('Failed to load profile.')
-                : Column(
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      const Text(
-                        'Welcome back!',
-                        style: TextStyle(fontSize: 20),
-                      ),
-                      const SizedBox(height: 12),
-                      Text(
-                        _user!.name,
-                        style: const TextStyle(
-                            fontSize: 24, fontWeight: FontWeight.bold),
-                      ),
-                      const SizedBox(height: 8),
-                      Text(
-                        _user!.email,
-                        style: const TextStyle(fontSize: 18),
-                      ),
-                    ],
-                  ),
+      appBar: AppBar(title: const Text('Template')),
+      body: Padding(
+        padding: const EdgeInsets.all(16.0),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            const HeaderWidget(),
+            const SizedBox(height: 20),
+            const Text(
+              'This is the Home Page placeholder.',
+              style: TextStyle(fontSize: 16),
+            ),
+          ],
+        ),
       ),
     );
   }

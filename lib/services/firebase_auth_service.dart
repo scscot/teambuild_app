@@ -2,6 +2,8 @@ import 'dart:convert';
 import 'package:http/http.dart' as http;
 import 'session_manager.dart';
 import 'package:flutter/foundation.dart';
+import 'package:firebase_auth/firebase_auth.dart';
+import '../models/user_model.dart';
 
 class FirebaseAuthService {
   final String apiKey;
@@ -23,9 +25,16 @@ class FirebaseAuthService {
     );
 
     if (response.statusCode == 200) {
-      final data = json.decode(response.body);
-      await SessionManager.instance
-          .saveSession(data['localId'], data['idToken']);
+      final currentUser = FirebaseAuth.instance.currentUser;
+      if (currentUser != null && currentUser.uid.isNotEmpty) {
+        final userData = {
+          'uid': currentUser.uid,
+          'email': currentUser.email,
+          'displayName': currentUser.displayName,
+        };
+        final user = UserModel.fromMap(userData);
+        await SessionManager.instance.saveSession(user);
+      }
       return true;
     } else {
       debugPrint('Login failed: ${response.body}');
