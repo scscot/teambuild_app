@@ -1,4 +1,4 @@
-// PATCHED — new_registration_screen.dart (referral code auto-detect + sponsor display + role handling)
+// FINAL PATCHED — new_registration_screen.dart with upline qualification logic
 
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
@@ -11,6 +11,7 @@ import '../services/firestore_service.dart';
 import '../services/session_manager.dart';
 import '../data/states_by_country.dart';
 import 'dashboard_screen.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
 
 class NewRegistrationScreen extends StatefulWidget {
   final String? referralCode;
@@ -61,7 +62,7 @@ class _NewRegistrationScreenState extends State<NewRegistrationScreen> {
 
     try {
       final uri = Uri.parse(
-          'https://us-central1-teambuilder-plus-fe74d.cloudfunctions.net/getUserByReferralCode?code=$code');
+        'https://us-central1-teambuilder-plus-fe74d.cloudfunctions.net/getUserByReferralCode?code=$code');
       final response = await http.get(uri);
 
       if (response.statusCode == 200) {
@@ -104,6 +105,30 @@ class _NewRegistrationScreenState extends State<NewRegistrationScreen> {
     await FirestoreService().incrementUplineCounts(referralCode);
   }
 
+  Future<void> _qualifyUpline(String? referredBy) async {
+    if (referredBy == null || referredBy.isEmpty) return;
+    String? currentUid = referredBy;
+
+    while (currentUid != null && currentUid.isNotEmpty) {
+      final userDoc = await FirestoreService().getUser(currentUid);
+      if (userDoc == null) break;
+
+      final isAdmin = userDoc.role == 'admin';
+      final direct = userDoc.directSponsorCount ?? 0;
+      final total = userDoc.totalTeamCount ?? 0;
+      final directMin = userDoc.directSponsorMin ?? 1;
+      final totalMin = userDoc.totalTeamMin ?? 1;
+      final qualified = userDoc.qualifiedDate != null;
+
+      if (!isAdmin && !qualified && direct >= directMin && total >= totalMin) {
+        await FirestoreService().updateUser(currentUid, {
+          'qualified_date': FieldValue.serverTimestamp()
+        });
+      }
+      currentUid = userDoc.referredBy;
+    }
+  }
+
   Future<void> _register() async {
     if (!_formKey.currentState!.validate()) return;
     setState(() => _isLoading = true);
@@ -136,6 +161,7 @@ class _NewRegistrationScreenState extends State<NewRegistrationScreen> {
 
       await FirestoreService().createUser(newUser.toMap());
       await _updateUplineCounts(referredBy);
+      await _qualifyUpline(referredBy);
       await SessionManager().setCurrentUser(newUser);
 
       if (mounted) {

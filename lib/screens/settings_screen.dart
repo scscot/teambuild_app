@@ -170,7 +170,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
               const SizedBox(height: 24),
               const Text('Available Countries', style: TextStyle(fontWeight: FontWeight.bold)),
               const SizedBox(height: 4),
-              const Text("Select the countries where your business opportunity is available. You can also choose 'All Countries."),
+              const Text("Select the countries where your business opportunity is currently available."),
               CheckboxListTile(
                 title: const Text('Select All Countries'),
                 value: _selectAllCountries,

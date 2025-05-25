@@ -1,4 +1,4 @@
-// FINAL PATCHED — user_model.dart with city, sponsor counts, and role (string-based)
+// FINAL PATCHED — user_model.dart with biz_opp support and sponsor thresholds
 
 import 'package:cloud_firestore/cloud_firestore.dart';
 
@@ -18,7 +18,10 @@ class UserModel {
   final int? level;
   final int? directSponsorCount;
   final int? totalTeamCount;
-  final String? role; // PATCHED: use role string instead of isAdmin bool
+  final int? directSponsorMin;
+  final int? totalTeamMin;
+  final String? role;
+  final DateTime? qualifiedDate;
 
   UserModel({
     required this.uid,
@@ -36,7 +39,10 @@ class UserModel {
     this.level,
     this.directSponsorCount,
     this.totalTeamCount,
+    this.directSponsorMin,
+    this.totalTeamMin,
     this.role,
+    this.qualifiedDate,
   });
 
   Map<String, dynamic> toMap() {
@@ -54,9 +60,12 @@ class UserModel {
       'createdAt': createdAt?.toIso8601String(),
       'joined': joined?.toIso8601String(),
       'level': level,
-      'directSponsorCount': directSponsorCount,
-      'totalTeamCount': totalTeamCount,
-      'role': role, // PATCHED
+      'direct_sponsor_count': directSponsorCount,
+      'total_team_count': totalTeamCount,
+      'direct_sponsor_min': directSponsorMin,
+      'total_team_min': totalTeamMin,
+      'role': role,
+      'qualified_date': qualifiedDate?.toIso8601String(),
     };
   }
 
@@ -75,9 +84,12 @@ class UserModel {
       createdAt: _parseTimestamp(map['createdAt']),
       joined: _parseTimestamp(map['joined']),
       level: map['level'],
-      directSponsorCount: map['directSponsorCount'],
-      totalTeamCount: map['totalTeamCount'],
-      role: map['role'], // PATCHED
+      directSponsorCount: map['direct_sponsor_count'],
+      totalTeamCount: map['total_team_count'],
+      directSponsorMin: map['direct_sponsor_min'],
+      totalTeamMin: map['total_team_min'],
+      role: map['role'],
+      qualifiedDate: _parseTimestamp(map['qualified_date']),
     );
   }
 
@@ -109,7 +121,10 @@ class UserModel {
     int? level,
     int? directSponsorCount,
     int? totalTeamCount,
-    String? role, // PATCHED
+    int? directSponsorMin,
+    int? totalTeamMin,
+    String? role,
+    DateTime? qualifiedDate,
   }) {
     return UserModel(
       uid: uid ?? this.uid,
@@ -127,7 +142,10 @@ class UserModel {
       level: level ?? this.level,
       directSponsorCount: directSponsorCount ?? this.directSponsorCount,
       totalTeamCount: totalTeamCount ?? this.totalTeamCount,
-      role: role ?? this.role, // PATCHED
+      directSponsorMin: directSponsorMin ?? this.directSponsorMin,
+      totalTeamMin: totalTeamMin ?? this.totalTeamMin,
+      role: role ?? this.role,
+      qualifiedDate: qualifiedDate ?? this.qualifiedDate,
     );
   }
 }
