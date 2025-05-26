@@ -1,4 +1,4 @@
-// CLEAN PATCHED — profile_screen.dart with biometric availability check and improved toggle label
+// ignore_for_file: unused_import, use_build_context_synchronously, control_flow_in_finally
 
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
@@ -11,8 +11,8 @@ import '../services/session_manager.dart';
 import '../models/user_model.dart';
 import '../services/firestore_service.dart';
 import 'edit_profile_screen.dart';
-import 'login_screen.dart'; // ✅ Added for logout redirect
-import '../widgets/header_widgets.dart'; // ✅ Added header widget
+import 'login_screen.dart';
+import '../widgets/header_widgets.dart';
 
 class ProfileScreen extends StatefulWidget {
   const ProfileScreen({super.key});
@@ -40,6 +40,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
     final auth = LocalAuthentication();
     final available = await auth.canCheckBiometrics;
     final supported = await auth.isDeviceSupported();
+    if (!mounted) return;
     setState(() {
       _biometricsAvailable = available && supported;
     });
@@ -50,6 +51,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
     if (currentUser != null) {
       debugPrint(
           '✅ Current user loaded: ${currentUser.firstName} ${currentUser.lastName}');
+      if (!mounted) return;
       setState(() => _user = currentUser);
 
       if (currentUser.referredBy != null &&
@@ -59,10 +61,9 @@ class _ProfileScreenState extends State<ProfileScreen> {
         try {
           final sponsorName = await FirestoreService()
               .getSponsorNameByReferralCode(currentUser.referredBy!);
-          if (mounted) {
-            debugPrint('✅ Sponsor name resolved: $sponsorName');
-            setState(() => _sponsorName = sponsorName);
-          }
+          if (!mounted) return;
+          debugPrint('✅ Sponsor name resolved: $sponsorName');
+          setState(() => _sponsorName = sponsorName);
         } catch (e) {
           debugPrint('❌ Failed to load sponsor data: $e');
         }
@@ -107,6 +108,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
             return;
           }
 
+          if (!mounted) return;
           showDialog(
             context: context,
             barrierDismissible: false,
@@ -125,13 +127,15 @@ class _ProfileScreenState extends State<ProfileScreen> {
 
           final updatedUser = _user!.copyWith(photoUrl: imageUrl);
           await SessionManager().setCurrentUser(updatedUser);
+          if (!mounted) return;
           setState(() => _user = updatedUser);
 
           debugPrint('✅ Image uploaded and profile updated successfully');
         } catch (e) {
           debugPrint('❌ Error uploading image: $e');
         } finally {
-          Navigator.of(context).pop(); // dismiss spinner
+          if (!mounted) return;
+          Navigator.of(context).pop();
         }
       }
     }
@@ -139,20 +143,24 @@ class _ProfileScreenState extends State<ProfileScreen> {
 
   Future<void> _loadBiometricSetting() async {
     final enabled = await SessionManager().getBiometricEnabled();
+    if (!mounted) return;
     setState(() => _biometricEnabled = enabled);
   }
 
   Future<void> _toggleBiometric(bool value) async {
     debugPrint('🟢 Biometric toggle set to: $value');
+    if (!mounted) return;
     setState(() => _biometricEnabled = value);
     await SessionManager().setBiometricEnabled(value);
   }
 
   void _navigateToEditProfile() {
-    Navigator.push(
-      context,
-      MaterialPageRoute(builder: (_) => EditProfileScreen(user: _user!)),
-    ).then((_) => _loadUserData());
+    if (!mounted) return;
+    Navigator.of(context)
+        .push(
+          MaterialPageRoute(builder: (_) => EditProfileScreen(user: _user!)),
+        )
+        .then((_) => _loadUserData());
   }
 
   @override

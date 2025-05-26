@@ -1,5 +1,7 @@
 // FINAL PATCHED — new_registration_screen.dart with upline qualification logic
 
+// ignore_for_file: use_build_context_synchronously
+
 import 'package:flutter/material.dart';
 
 import 'package:uuid/uuid.dart';

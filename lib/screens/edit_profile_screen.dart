@@ -1,6 +1,4 @@
-// PATCH START: fix countryStateMap reference by importing and using statesByCountry
 import 'package:flutter/material.dart';
-
 import '../models/user_model.dart';
 import '../services/firestore_service.dart';
 import '../services/session_manager.dart';
@@ -61,14 +59,16 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
       );
 
       await SessionManager().setCurrentUser(updatedUser);
-      if (mounted) Navigator.of(context).pop(updatedUser);
+      if (!mounted) return;
+      Navigator.of(context).pop(updatedUser);
     } catch (e) {
       debugPrint('❌ Failed to update profile: $e');
+      if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(content: Text('Failed to update profile: $e')),
       );
     } finally {
-      setState(() => _isSaving = false);
+      if (mounted) setState(() => _isSaving = false);
     }
   }
 
@@ -147,4 +147,3 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
     );
   }
 }
-// PATCH END

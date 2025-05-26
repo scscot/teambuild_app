@@ -38,8 +38,9 @@ class _UpdateProfileScreenState extends State<UpdateProfileScreen> {
         final uri = Uri.tryParse(fullUrl);
         if (uri != null) {
           setState(() {
-            baseUrl =
-                '${uri.scheme}://${uri.host}${uri.path.endsWith('/') ? uri.path : uri.path + '/'}';
+            baseUrl = uri.path.endsWith('/')
+                ? "\${uri.scheme}://\${uri.host}\${uri.path}"
+                : "\${uri.scheme}://\${uri.host}\${uri.path}/";
             bizOpp = adminData['biz_opp'];
           });
         }
@@ -56,7 +57,7 @@ class _UpdateProfileScreenState extends State<UpdateProfileScreen> {
         context: context,
         builder: (_) => AlertDialog(
           title: const Text('Invalid Referral Link'),
-          content: Text('Your unique referral link must begin with $baseUrl.'),
+          content: Text('Your unique referral link must begin with \$baseUrl.'),
           actions: [
             ElevatedButton(
               onPressed: () => Navigator.pop(context),
@@ -102,13 +103,13 @@ class _UpdateProfileScreenState extends State<UpdateProfileScreen> {
                   children: [
                     const SizedBox(height: 20),
                     Text(
-                      "Congratulations on completing your '$bizOpp' registration.",
+                      "Congratulations on completing your '\$bizOpp' registration.",
                       style: const TextStyle(
                           fontSize: 18, fontWeight: FontWeight.bold),
                     ),
                     const SizedBox(height: 12),
                     Text(
-                      "Updating your TeamBuild Pro profile with your unique '$bizOpp' referral link ensures that anyone in your TeamBuild Pro downline who completes their '$bizOpp' registration will automatically be placed in your '$bizOpp' downline.",
+                      "Updating your TeamBuild Pro profile with your unique '\$bizOpp' referral link ensures that anyone in your TeamBuild Pro downline who completes their '\$bizOpp' registration will automatically be placed in your '\$bizOpp' downline.",
                     ),
                     const SizedBox(height: 24),
                     Text(

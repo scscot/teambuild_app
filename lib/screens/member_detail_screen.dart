@@ -94,9 +94,7 @@ class _MemberDetailScreenState extends State<MemberDetailScreen> {
                   if (_canSendMessage())
                     Center(
                       child: ElevatedButton.icon(
-                        onPressed: () {
-                          // TODO: implement messaging action
-                        },
+                        onPressed: () {},
                         icon: const Icon(Icons.message),
                         label: const Text('Send Message'),
                         style: ElevatedButton.styleFrom(

@@ -1,3 +1,5 @@
+import 'package:flutter/material.dart';
+
 class ChatService {
   Future<void> sendMessage(String userId, String message) async {
     // Placeholder for chat logic

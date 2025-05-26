@@ -1,5 +1,3 @@
-// FINAL PATCHED — auth_service.dart with UserModel hydration
-
 import 'package:firebase_auth/firebase_auth.dart';
 import '../models/user_model.dart';
 import '../services/firestore_service.dart';
@@ -34,8 +32,9 @@ class AuthService {
       if (uid == null) throw Exception('User ID not found after registration.');
 
       final user = await FirestoreService().getUser(uid);
-      if (user == null)
+      if (user == null) {
         throw Exception('User not found in Firestore after registration.');
+      }
 
       debugPrint('✅ AuthService — Registration success. UID: $uid');
       return user;

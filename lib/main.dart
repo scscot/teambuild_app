@@ -5,7 +5,6 @@ import 'package:firebase_core/firebase_core.dart'; // ✅ Required
 import 'screens/login_screen.dart';
 import 'screens/dashboard_screen.dart';
 import 'services/session_manager.dart';
-import 'models/user_model.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();

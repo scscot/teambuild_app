@@ -1,4 +1,4 @@
-// CLEAN PATCHED — login_screen.dart with biometric login support and corrected AuthService method
+// ignore_for_file: use_build_context_synchronously
 
 import 'package:flutter/material.dart';
 import 'package:local_auth/local_auth.dart';
@@ -51,21 +51,22 @@ class _LoginScreenState extends State<LoginScreen> {
             const AuthenticationOptions(biometricOnly: true, stickyAuth: true),
       );
 
+      if (!mounted) return;
+
       if (didAuthenticate) {
         final currentUser = FirebaseAuth.instance.currentUser;
         if (currentUser != null && currentUser.uid.isNotEmpty) {
           final userData =
               await FirestoreService().getUserData(currentUser.uid);
+
           if (userData != null) {
             final fullUser =
                 UserModel.fromMap(userData).copyWith(uid: currentUser.uid);
             await SessionManager.instance.setCurrentUser(fullUser);
-            if (mounted) {
-              Navigator.pushReplacement(
-                context,
-                MaterialPageRoute(builder: (_) => const DashboardScreen()),
-              );
-            }
+            if (!mounted) return;
+            Navigator.of(context).pushReplacement(
+              MaterialPageRoute(builder: (context) => const DashboardScreen()),
+            );
             return;
           }
         }
@@ -85,17 +86,18 @@ class _LoginScreenState extends State<LoginScreen> {
         _emailController.text.trim(),
         _passwordController.text.trim(),
       );
-      await SessionManager.instance.setCurrentUser(user); // ✅ FIXED HERE
-      Navigator.pushReplacement(
-        context,
-        MaterialPageRoute(builder: (_) => const DashboardScreen()),
+      await SessionManager.instance.setCurrentUser(user);
+      if (!mounted) return;
+      Navigator.of(context).pushReplacement(
+        MaterialPageRoute(builder: (context) => const DashboardScreen()),
       );
     } catch (e) {
+      if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(content: Text('Login failed: $e')),
       );
     } finally {
-      setState(() => _isLoading = false);
+      if (mounted) setState(() => _isLoading = false);
     }
   }
 
@@ -138,6 +140,7 @@ class _LoginScreenState extends State<LoginScreen> {
                 onPressed: () async {
                   final email = _emailController.text.trim();
                   if (email.isEmpty) {
+                    if (!mounted) return;
                     ScaffoldMessenger.of(context).showSnackBar(
                       const SnackBar(
                           content: Text('Please enter your email first.')),
@@ -147,11 +150,13 @@ class _LoginScreenState extends State<LoginScreen> {
                   try {
                     await FirebaseAuth.instance
                         .sendPasswordResetEmail(email: email);
+                    if (!mounted) return;
                     ScaffoldMessenger.of(context).showSnackBar(
                       const SnackBar(
                           content: Text('Password reset email sent.')),
                     );
                   } catch (e) {
+                    if (!mounted) return;
                     ScaffoldMessenger.of(context).showSnackBar(
                       SnackBar(content: Text('Failed to send reset email: $e')),
                     );
@@ -162,10 +167,9 @@ class _LoginScreenState extends State<LoginScreen> {
               const SizedBox(height: 16),
               TextButton(
                 onPressed: () {
-                  Navigator.push(
-                    context,
+                  Navigator.of(context).push(
                     MaterialPageRoute(
-                        builder: (_) => const NewRegistrationScreen()),
+                        builder: (context) => const NewRegistrationScreen()),
                   );
                 },
                 child: const Text('Create Account'),
