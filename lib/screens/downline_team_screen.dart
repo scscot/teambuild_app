@@ -1,11 +1,8 @@
-// PATCHED — downline_team_screen.dart with accurate dropdown count and filtering fix
-
 import 'package:flutter/material.dart';
 import 'dart:async';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import '../models/user_model.dart';
-
 import '../screens/member_detail_screen.dart';
 import '../widgets/header_widgets.dart';
 
@@ -15,6 +12,7 @@ enum JoinWindow {
   last24,
   last7,
   last30,
+  newQualified,
 }
 
 class DownlineTeamScreen extends StatefulWidget {
@@ -40,6 +38,7 @@ class _DownlineTeamScreenState extends State<DownlineTeamScreen> {
     JoinWindow.last24: 0,
     JoinWindow.last7: 0,
     JoinWindow.last30: 0,
+    JoinWindow.newQualified: 0,
   };
 
   @override
@@ -89,6 +88,7 @@ class _DownlineTeamScreenState extends State<DownlineTeamScreen> {
           joined: _parseTimestamp(data['createdAt']),
           createdAt: _parseTimestamp(data['createdAt']),
           level: data['level'],
+          qualifiedDate: _parseTimestamp(data['qualified_date']),
         );
       }).toList();
 
@@ -116,26 +116,31 @@ class _DownlineTeamScreenState extends State<DownlineTeamScreen> {
         final direct = allUsers.where((u) => u.referredBy == refCode).toList();
         for (var user in direct) {
           final joined = user.joined;
+          final qualified = user.qualifiedDate;
           if (user.level != null) {
             if (joined != null) {
-              final joinedDate = joined;
-              if (joinedDate.isAfter(now.subtract(const Duration(days: 1)))) {
+              if (joined.isAfter(now.subtract(const Duration(days: 1)))) {
                 downlineCounts[JoinWindow.last24] =
-                    downlineCounts[JoinWindow.last24]! + 1;
+                    (downlineCounts[JoinWindow.last24] ?? 0) + 1;
               }
-              if (joinedDate.isAfter(now.subtract(const Duration(days: 7)))) {
+              if (joined.isAfter(now.subtract(const Duration(days: 7)))) {
                 downlineCounts[JoinWindow.last7] =
-                    downlineCounts[JoinWindow.last7]! + 1;
+                    (downlineCounts[JoinWindow.last7] ?? 0) + 1;
               }
-              if (joinedDate.isAfter(now.subtract(const Duration(days: 30)))) {
+              if (joined.isAfter(now.subtract(const Duration(days: 30)))) {
                 downlineCounts[JoinWindow.last30] =
-                    downlineCounts[JoinWindow.last30]! + 1;
+                    (downlineCounts[JoinWindow.last30] ?? 0) + 1;
               }
             }
+            if (qualified != null &&
+                qualified.isAfter(now.subtract(const Duration(days: 1)))) {
+              downlineCounts[JoinWindow.newQualified] =
+                  (downlineCounts[JoinWindow.newQualified] ?? 0) + 1;
+            }
             downlineCounts[JoinWindow.all] =
-                downlineCounts[JoinWindow.all]! + 1;
+                (downlineCounts[JoinWindow.all] ?? 0) + 1;
 
-            if (selectedJoinWindow == JoinWindow.none ||
+            final include = selectedJoinWindow == JoinWindow.none ||
                 selectedJoinWindow == JoinWindow.all ||
                 (selectedJoinWindow == JoinWindow.last24 &&
                     joined != null &&
@@ -145,11 +150,15 @@ class _DownlineTeamScreenState extends State<DownlineTeamScreen> {
                     joined.isAfter(now.subtract(const Duration(days: 7)))) ||
                 (selectedJoinWindow == JoinWindow.last30 &&
                     joined != null &&
-                    joined.isAfter(now.subtract(const Duration(days: 30))))) {
-              if (_searchQuery.isEmpty || userMatchesSearch(user)) {
-                grouped.putIfAbsent(user.level!, () => []).add(user);
-              }
+                    joined.isAfter(now.subtract(const Duration(days: 30)))) ||
+                (selectedJoinWindow == JoinWindow.newQualified &&
+                    qualified != null &&
+                    qualified.isAfter(now.subtract(const Duration(days: 1))));
+
+            if (include && (_searchQuery.isEmpty || userMatchesSearch(user))) {
+              grouped.putIfAbsent(user.level!, () => []).add(user);
             }
+
             if (!visited.contains(user.referralCode)) {
               visited.add(user.referralCode ?? '');
               collect(user.referralCode ?? '');
@@ -183,6 +192,8 @@ class _DownlineTeamScreenState extends State<DownlineTeamScreen> {
         return 'Joined Previous 7 Days (${downlineCounts[JoinWindow.last7]})';
       case JoinWindow.last30:
         return 'Joined Previous 30 Days (${downlineCounts[JoinWindow.last30]})';
+      case JoinWindow.newQualified:
+        return 'New Qualified Team Members (${downlineCounts[JoinWindow.newQualified]})';
       case JoinWindow.all:
         return 'All Team Members (${downlineCounts[JoinWindow.all]})';
       case JoinWindow.none:
@@ -227,7 +238,8 @@ class _DownlineTeamScreenState extends State<DownlineTeamScreen> {
                       JoinWindow.all,
                       JoinWindow.last24,
                       JoinWindow.last7,
-                      JoinWindow.last30
+                      JoinWindow.last30,
+                      JoinWindow.newQualified,
                     ].map((window) {
                       return DropdownMenuItem(
                         value: window,
