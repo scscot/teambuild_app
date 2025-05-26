@@ -59,6 +59,21 @@ class _AppHeaderWithMenuState extends State<AppHeaderWithMenu> {
     }
   }
 
+  bool _shouldShowBackButton(BuildContext context) {
+    final ModalRoute<Object?>? route = ModalRoute.of(context);
+    final settingsName = route?.settings.name;
+
+    final suppressedRoutes = [
+      '/',
+      '/dashboard',
+      '/login',
+      '/home',
+      '/register'
+    ];
+
+    return !(settingsName != null && suppressedRoutes.contains(settingsName));
+  }
+
   @override
   Widget build(BuildContext context) {
     final isLoginScreen = context.widget.runtimeType == LoginScreen ||
@@ -66,9 +81,17 @@ class _AppHeaderWithMenuState extends State<AppHeaderWithMenu> {
         context.widget.runtimeType.toString().contains('HomePage') ||
         context.widget.runtimeType == NewRegistrationScreen;
 
+    final showBack = _shouldShowBackButton(context);
+
     return AppBar(
       backgroundColor: const Color(0xFFEDE7F6),
-      automaticallyImplyLeading: !isLoginScreen,
+      automaticallyImplyLeading: false,
+      leading: showBack
+          ? IconButton(
+              icon: const Icon(Icons.arrow_back, color: Colors.black),
+              onPressed: () => Navigator.pop(context),
+            )
+          : null,
       title: const Text(
         'TeamBuild Pro',
         style: TextStyle(fontWeight: FontWeight.bold, color: Colors.black),
@@ -162,6 +185,75 @@ class _AppHeaderWithMenuState extends State<AppHeaderWithMenu> {
                 ],
               )
             ],
+      actions: [
+        PopupMenuButton<String>(
+          icon: const Icon(Icons.menu, color: Colors.black),
+          onSelected: (String value) async {
+            switch (value) {
+              case 'dashboard':
+                Navigator.push(context,
+                    MaterialPageRoute(builder: (_) => const DashboardScreen()));
+                break;
+              case 'profile':
+                Navigator.push(context,
+                    MaterialPageRoute(builder: (_) => const ProfileScreen()));
+                break;
+              case 'downline':
+                Navigator.push(
+                    context,
+                    MaterialPageRoute(
+                        builder: (_) =>
+                            const DownlineTeamScreen(referredBy: 'demo-user')));
+                break;
+              case 'share':
+                Navigator.push(
+                    context, MaterialPageRoute(builder: (_) => ShareScreen()));
+                break;
+              case 'join':
+                Navigator.push(
+                    context,
+                    MaterialPageRoute(
+                        builder: (_) => const JoinOpportunityScreen()));
+                break;
+              case 'logout':
+                await SessionManager().clearSession();
+                await FirebaseAuth.instance.signOut();
+                Navigator.of(context).pushAndRemoveUntil(
+                  MaterialPageRoute(builder: (_) => const LoginScreen()),
+                  (route) => false,
+                );
+                break;
+            }
+          },
+          itemBuilder: (BuildContext context) => [
+            if (showJoinOpportunity)
+              const PopupMenuItem<String>(
+                value: 'join',
+                child: Text('Join Now!'),
+              ),
+            const PopupMenuItem<String>(
+              value: 'dashboard',
+              child: Text('Dashboard'),
+            ),
+            const PopupMenuItem<String>(
+              value: 'profile',
+              child: Text('Profile'),
+            ),
+            const PopupMenuItem<String>(
+              value: 'downline',
+              child: Text('Downline'),
+            ),
+            const PopupMenuItem<String>(
+              value: 'share',
+              child: Text('Share'),
+            ),
+            const PopupMenuItem<String>(
+              value: 'logout',
+              child: Text('Logout'),
+            ),
+          ],
+        )
+      ],
     );
   }
 }
