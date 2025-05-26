@@ -22,6 +22,7 @@ class _JoinOpportunityScreenState extends State<JoinOpportunityScreen> {
   int currentDirect = 0;
   int currentTeam = 0;
   bool loading = true;
+  bool hasVisitedOpp = false;
 
   @override
   void initState() {
@@ -42,6 +43,7 @@ class _JoinOpportunityScreenState extends State<JoinOpportunityScreen> {
       firstName = userData['firstName'];
       currentDirect = userData['direct_sponsor_count'] ?? 0;
       currentTeam = userData['total_team_count'] ?? 0;
+      hasVisitedOpp = userData['biz_visit_date'] != null;
     });
 
     String? currentUid = userData['referredBy'];
@@ -99,8 +101,35 @@ class _JoinOpportunityScreenState extends State<JoinOpportunityScreen> {
         await FirebaseFirestore.instance.collection('users').doc(uid).update({
           'biz_visit_date': Timestamp.now(),
         });
+        setState(() => hasVisitedOpp = true);
       }
       await launchUrl(Uri.parse(bizOppRefUrl!));
+    }
+  }
+
+  void _handleCompletedRegistrationClick() {
+    if (hasVisitedOpp) {
+      Navigator.push(
+        context,
+        MaterialPageRoute(
+          builder: (_) => const UpdateProfileScreen(),
+        ),
+      );
+    } else {
+      showDialog(
+        context: context,
+        builder: (_) => AlertDialog(
+          title: const Text('Visit Required First'),
+          content: Text(
+              "Before updating your TeamBuild Pro profile with your ‘$bizOpp’ referral link, you must first use the ‘Join Now’ button on this page to visit ‘$bizOpp’ and complete your registration.\n\nThen return to this page to update your TeamBuild Pro profile with your unique ‘$bizOpp’ referral link."),
+          actions: [
+            ElevatedButton(
+              onPressed: () => Navigator.pop(context),
+              child: const Text('I Understand!'),
+            ),
+          ],
+        ),
+      );
     }
   }
 
@@ -140,14 +169,7 @@ class _JoinOpportunityScreenState extends State<JoinOpportunityScreen> {
             const SizedBox(height: 32),
             Center(
               child: GestureDetector(
-                onTap: () {
-                  Navigator.push(
-                    context,
-                    MaterialPageRoute(
-                      builder: (_) => const UpdateProfileScreen(),
-                    ),
-                  );
-                },
+                onTap: _handleCompletedRegistrationClick,
                 child: Text(
                   "I have completed my '$bizOpp' registration.",
                   style: const TextStyle(

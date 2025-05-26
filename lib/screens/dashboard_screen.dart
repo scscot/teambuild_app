@@ -8,7 +8,7 @@ import '../models/user_model.dart';
 import '../widgets/header_widgets.dart';
 import '../screens/settings_screen.dart';
 import '../screens/join_opportunity_screen.dart';
-
+import '../screens/my_biz_screen.dart';
 
 class DashboardScreen extends StatefulWidget {
   const DashboardScreen({super.key});
@@ -43,7 +43,11 @@ class _DashboardScreenState extends State<DashboardScreen> {
           .collection('users')
           .doc(sessionUser.uid)
           .get();
-      final updatedUser = UserModel.fromFirestore(userDoc);
+      final updatedUser = UserModel.fromMap({
+        ...userDoc.data()!,
+        'uid': userDoc.id,
+        'biz_opp_ref_url': userDoc.data()?['biz_opp_ref_url'],
+      });
 
       final adminSettings = await FirebaseFirestore.instance
           .collection('admin_settings')
@@ -57,7 +61,8 @@ class _DashboardScreenState extends State<DashboardScreen> {
       debugPrint('🔎 Firestore values:');
       debugPrint('  🔸 directSponsorMin: $directSponsorMin');
       debugPrint('  🔸 totalTeamMin:     $totalTeamMin');
-      debugPrint('  🔹 user.directSponsorCount: ${updatedUser.directSponsorCount}');
+      debugPrint(
+          '  🔹 user.directSponsorCount: ${updatedUser.directSponsorCount}');
       debugPrint('  🔹 user.totalTeamCount:     ${updatedUser.totalTeamCount}');
 
       setState(() {
@@ -72,6 +77,30 @@ class _DashboardScreenState extends State<DashboardScreen> {
     }
   }
 
+  Widget buildButton({
+    required IconData icon,
+    required String label,
+    required VoidCallback onPressed,
+  }) {
+    return Container(
+      margin: const EdgeInsets.symmetric(vertical: 8),
+      width: double.infinity,
+      child: ElevatedButton.icon(
+        style: ElevatedButton.styleFrom(
+          backgroundColor: Colors.deepPurple,
+          foregroundColor: Colors.white,
+          padding: const EdgeInsets.symmetric(vertical: 16),
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(12),
+          ),
+        ),
+        icon: Icon(icon, size: 22),
+        label: Text(label, style: const TextStyle(fontSize: 16)),
+        onPressed: onPressed,
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     if (_isLoading) {
@@ -84,101 +113,82 @@ class _DashboardScreenState extends State<DashboardScreen> {
 
     return Scaffold(
       appBar: AppHeaderWithMenu(),
-      body: Column(
-        crossAxisAlignment: CrossAxisAlignment.center,
-        children: [
-          const Padding(
-            padding: EdgeInsets.only(top: 24.0),
-            child: Center(
-              child: Text(
-                'Dashboard',
-                style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
+      body: Padding(
+        padding: const EdgeInsets.symmetric(horizontal: 16),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.center,
+          children: [
+            const Padding(
+              padding: EdgeInsets.only(top: 24.0),
+              child: Center(
+                child: Text(
+                  'Dashboard',
+                  style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
+                ),
               ),
             ),
-          ),
-          const SizedBox(height: 32),
-          if (user?.role == 'admin')
-            SizedBox(
-              width: double.infinity,
-              child: ElevatedButton.icon(
-                icon: const Icon(Icons.settings),
-                label: const Text('Account Settings'),
+            const SizedBox(height: 32),
+            if (user?.role == 'admin')
+              buildButton(
+                icon: Icons.settings,
+                label: 'Account Settings',
+                onPressed: () => Navigator.push(
+                  context,
+                  MaterialPageRoute(builder: (_) => const SettingsScreen()),
+                ),
+              ),
+            if (user?.role != 'admin' &&
+                (user?.directSponsorCount ?? 0) >= (_directSponsorMin ?? 1) &&
+                (user?.totalTeamCount ?? 0) >= (_totalTeamMin ?? 1))
+              buildButton(
+                icon: Icons.play_arrow,
+                label: user?.bizOppRefUrl != null
+                    ? 'My Opportunity'
+                    : 'Join Opportunity',
                 onPressed: () {
-                  Navigator.push(
-                    context,
-                    MaterialPageRoute(builder: (_) => const SettingsScreen()),
-                  );
-                },
-              ),
-            ),
-          // PATCH START: Join Opportunity Button
-          if (user?.role != 'admin' &&
-              (user?.directSponsorCount ?? 0) >= (_directSponsorMin ?? 1) &&
-              (user?.totalTeamCount ?? 0) >= (_totalTeamMin ?? 1))
-            Padding(
-              padding: const EdgeInsets.only(top: 16.0),
-              child: SizedBox(
-                width: double.infinity,
-                child: ElevatedButton.icon(
-                  icon: const Icon(Icons.play_arrow),
-                  label: const Text('Join Opportunity'),
-                  onPressed: () {
+                  if (user?.bizOppRefUrl != null) {
+                    Navigator.push(
+                      context,
+                      MaterialPageRoute(builder: (_) => const MyBizScreen()),
+                    );
+                  } else {
                     Navigator.push(
                       context,
                       MaterialPageRoute(
                           builder: (_) => const JoinOpportunityScreen()),
                     );
-                  },
+                  }
+                },
+              ),
+            buildButton(
+              icon: Icons.person,
+              label: 'My Profile',
+              onPressed: () => Navigator.push(
+                context,
+                MaterialPageRoute(builder: (_) => const ProfileScreen()),
+              ),
+            ),
+            buildButton(
+              icon: Icons.group,
+              label: 'My Downline',
+              onPressed: () => Navigator.push(
+                context,
+                MaterialPageRoute(
+                  builder: (_) =>
+                      const DownlineTeamScreen(referredBy: 'demo-user'),
                 ),
               ),
             ),
-          // PATCH END
-          const SizedBox(height: 16),
-          SizedBox(
-            width: double.infinity,
-            child: ElevatedButton.icon(
-              icon: const Icon(Icons.person),
-              label: const Text('My Profile'),
-              onPressed: () {
-                Navigator.push(
-                  context,
-                  MaterialPageRoute(builder: (_) => const ProfileScreen()),
-                );
-              },
+            buildButton(
+              icon: Icons.ios_share,
+              label: 'Share App',
+              onPressed: () => Navigator.push(
+                context,
+                MaterialPageRoute(builder: (_) => ShareScreen()),
+              ),
             ),
-          ),
-          const SizedBox(height: 16),
-          SizedBox(
-            width: double.infinity,
-            child: ElevatedButton.icon(
-              icon: const Icon(Icons.group),
-              label: const Text('My Downline'),
-              onPressed: () {
-                Navigator.push(
-                  context,
-                  MaterialPageRoute(
-                    builder: (_) =>
-                        const DownlineTeamScreen(referredBy: 'demo-user'),
-                  ),
-                );
-              },
-            ),
-          ),
-          const SizedBox(height: 16),
-          SizedBox(
-            width: double.infinity,
-            child: ElevatedButton.icon(
-              icon: const Icon(Icons.ios_share),
-              label: const Text('Share App'),
-              onPressed: () {
-                Navigator.push(
-                  context,
-                  MaterialPageRoute(builder: (_) => ShareScreen()),
-                );
-              },
-            ),
-          ),
-        ],
+          ],
+        ),
       ),
     );
   }

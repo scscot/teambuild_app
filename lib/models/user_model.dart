@@ -1,5 +1,3 @@
-// FINAL PATCHED — user_model.dart with biz_opp support and sponsor thresholds
-
 import 'package:cloud_firestore/cloud_firestore.dart';
 
 class UserModel {
@@ -13,6 +11,7 @@ class UserModel {
   final String? referralCode;
   final String? referredBy;
   final String? photoUrl;
+  final String? bizOppRefUrl; // ✅ NEW FIELD
   final DateTime? createdAt;
   final DateTime? joined;
   final int? level;
@@ -34,6 +33,7 @@ class UserModel {
     this.referralCode,
     this.referredBy,
     this.photoUrl,
+    this.bizOppRefUrl, // ✅ IN CONSTRUCTOR
     this.createdAt,
     this.joined,
     this.level,
@@ -57,6 +57,7 @@ class UserModel {
       'referralCode': referralCode,
       'referredBy': referredBy,
       'photoUrl': photoUrl,
+      'biz_opp_ref_url': bizOppRefUrl, // ✅ IN toMap
       'createdAt': createdAt?.toIso8601String(),
       'joined': joined?.toIso8601String(),
       'level': level,
@@ -81,6 +82,7 @@ class UserModel {
       referralCode: map['referralCode'],
       referredBy: map['referredBy'],
       photoUrl: map['photoUrl'],
+      bizOppRefUrl: map['biz_opp_ref_url'], // ✅ IN fromMap
       createdAt: _parseTimestamp(map['createdAt']),
       joined: _parseTimestamp(map['joined']),
       level: map['level'],
@@ -116,6 +118,7 @@ class UserModel {
     String? referralCode,
     String? referredBy,
     String? photoUrl,
+    String? bizOppRefUrl, // ✅ IN copyWith
     DateTime? createdAt,
     DateTime? joined,
     int? level,
@@ -137,6 +140,7 @@ class UserModel {
       referralCode: referralCode ?? this.referralCode,
       referredBy: referredBy ?? this.referredBy,
       photoUrl: photoUrl ?? this.photoUrl,
+      bizOppRefUrl: bizOppRefUrl ?? this.bizOppRefUrl, // ✅
       createdAt: createdAt ?? this.createdAt,
       joined: joined ?? this.joined,
       level: level ?? this.level,
