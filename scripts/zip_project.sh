@@ -14,5 +14,7 @@ zip ProjectFiles.zip \
   lib/data/states_by_country.dart \
   lib/widgets/* \
   lib/main.dart \
+  lib/firebase_options.dart \
+  functions/index.js \
   pubspec.yaml \
   ios/Podfile
