@@ -1,7 +1,7 @@
 #!/bin/bash
 
 set -e
-killall -9 Xcode
+killall -9 Xcode || true
 SRC_DIR=~/Desktop/tbp
 BUNDLE_ID="com.scott.teambuildApp"
 echo "📁 Starting clean rebuild in: $SRC_DIR"
@@ -42,15 +42,21 @@ rm -rf Flutter/Flutter.podspec
 rm -rf Runner.xcworkspace
 pod deintegrate
 pod install --repo-update
+
+# Step 7.5: Regenerate Manifest.lock after pods install
+if [ -f Podfile.lock ]; then
+  mkdir -p Pods
+  cp Podfile.lock Pods/Manifest.lock
+  echo "📦 Synced Podfile.lock → Pods/Manifest.lock for sandbox consistency"
+else
+  echo "⚠️ Podfile.lock not found. Pod install may have failed."
+fi
+
 cd ..
 
 cp scripts/GoogleService-Info.plist ios/Runner/GoogleService-Info.plist
 
-# Step 8: Final Dart clean & metadata regeneration
-flutter clean
-flutter pub get
-
-# Step 9: Regenerate .packages if missing
+# Step 8: Regenerate .packages if missing
 if [ ! -f .packages ]; then
   echo "📦 Regenerating .packages from package_config.json"
   if command -v jq &>/dev/null; then
@@ -60,20 +66,37 @@ if [ ! -f .packages ]; then
   fi
 fi
 
-# Step 9.5: Force Manifest.lock creation for Xcode sandbox sync
-mkdir -p "$SRC_DIR/ios/Pods"
-echo "🔍 Checking write access to: $SRC_DIR/ios/Pods/Manifest.lock"
-touch "$SRC_DIR/ios/Pods/Manifest.lock" && rm "$SRC_DIR/ios/Pods/Manifest.lock"
+# Step 9: Ensure GoogleService-Info.plist is included in Xcode project build phase
+echo "📲 Ensuring GoogleService-Info.plist is added to Xcode build phase..."
 
-if [ $? -eq 0 ]; then
-  echo "📦 Copying Podfile.lock → Pods/Manifest.lock..."
-  cp "$SRC_DIR/ios/Podfile.lock" "$SRC_DIR/ios/Pods/Manifest.lock"
+GOOGLE_PLIST_PATH="ios/Runner/GoogleService-Info.plist"
+XCODE_PROJECT_PATH="ios/Runner.xcodeproj/project.pbxproj"
+
+if [ -f "$GOOGLE_PLIST_PATH" ]; then
+  UUID_FILE_REF=$(uuidgen)
+  UUID_BUILD_FILE=$(uuidgen)
+  FILE_REF="        $UUID_FILE_REF /* GoogleService-Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist.xml; path = GoogleService-Info.plist; sourceTree = \"<group>\"; };"
+  BUILD_FILE="        $UUID_BUILD_FILE /* GoogleService-Info.plist in Resources */ = {isa = PBXBuildFile; fileRef = $UUID_FILE_REF /* GoogleService-Info.plist */; };"
+
+  echo "📎 Adding file reference and build file to project.pbxproj..."
+
+  # Only patch if not already present
+  if ! grep -q "GoogleService-Info.plist" "$XCODE_PROJECT_PATH"; then
+    sed -i '' "/Begin PBXFileReference section/,/End PBXFileReference section/ s|^.*End PBXFileReference section|$FILE_REF\
+    End PBXFileReference section|" "$XCODE_PROJECT_PATH"
+
+    sed -i '' "/Begin PBXBuildFile section/,/End PBXBuildFile section/ s|^.*End PBXBuildFile section|$BUILD_FILE\
+    End PBXBuildFile section|" "$XCODE_PROJECT_PATH"
+
+    echo "✅ GoogleService-Info.plist added to Xcode project references."
+  else
+    echo "ℹ️ GoogleService-Info.plist already included in project."
+  fi
 else
-  echo "❌ ERROR: No write permission to create Manifest.lock in $SRC_DIR/ios/Pods/"
-  ls -ld "$SRC_DIR/ios/Pods"
+  echo "❌ GoogleService-Info.plist not found at expected path: $GOOGLE_PLIST_PATH"
 fi
 
 # Step 10: Open Xcode
-open ios/Runner.xcworkspace
+# open ios/Runner.xcworkspace
 
 echo "✅ Clean rebuild complete. Bundle ID set to $BUNDLE_ID. Opened in Xcode for signing and archive."
