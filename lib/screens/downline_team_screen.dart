@@ -40,6 +40,7 @@ class _DownlineTeamScreenState extends State<DownlineTeamScreen> {
     JoinWindow.last30: 0,
     JoinWindow.newQualified: 0,
   };
+  String? uplineBizOpp;
 
   @override
   void initState() {
@@ -89,6 +90,7 @@ class _DownlineTeamScreenState extends State<DownlineTeamScreen> {
           createdAt: _parseTimestamp(data['createdAt']),
           level: data['level'],
           qualifiedDate: _parseTimestamp(data['qualified_date']),
+          uplineAdmin: data['upline_admin'],
         );
       }).toList();
 
@@ -96,6 +98,20 @@ class _DownlineTeamScreenState extends State<DownlineTeamScreen> {
         (u) => u.uid == currentUser?.uid,
         orElse: () => UserModel(uid: '', email: ''),
       );
+
+      // debugPrint('⚠️ uplineAdmin = ${currentUserModel.uplineAdmin}');
+
+      final uplineAdminCode = currentUserModel.uplineAdmin;
+      if (uplineAdminCode != null && uplineAdminCode.isNotEmpty) {
+        final uplineSnapshot = await FirebaseFirestore.instance
+            .collection('users')
+            .where('referralCode', isEqualTo: uplineAdminCode)
+            .limit(1)
+            .get();
+        if (uplineSnapshot.docs.isNotEmpty) {
+          uplineBizOpp = uplineSnapshot.docs.first.data()['biz_opp'];
+        }
+      }
 
       final currentRefCode = currentUserModel.referralCode;
 
@@ -132,8 +148,7 @@ class _DownlineTeamScreenState extends State<DownlineTeamScreen> {
                     (downlineCounts[JoinWindow.last30] ?? 0) + 1;
               }
             }
-            if (qualified != null &&
-                qualified.isAfter(now.subtract(const Duration(days: 1)))) {
+            if (qualified != null) {
               downlineCounts[JoinWindow.newQualified] =
                   (downlineCounts[JoinWindow.newQualified] ?? 0) + 1;
             }
@@ -152,8 +167,7 @@ class _DownlineTeamScreenState extends State<DownlineTeamScreen> {
                     joined != null &&
                     joined.isAfter(now.subtract(const Duration(days: 30)))) ||
                 (selectedJoinWindow == JoinWindow.newQualified &&
-                    qualified != null &&
-                    qualified.isAfter(now.subtract(const Duration(days: 1))));
+                    qualified != null);
 
             if (include && (_searchQuery.isEmpty || userMatchesSearch(user))) {
               grouped.putIfAbsent(user.level!, () => []).add(user);
@@ -193,7 +207,7 @@ class _DownlineTeamScreenState extends State<DownlineTeamScreen> {
       case JoinWindow.last30:
         return 'Joined Previous 30 Days (${downlineCounts[JoinWindow.last30]})';
       case JoinWindow.newQualified:
-        return 'New Qualified Team Members (${downlineCounts[JoinWindow.newQualified]})';
+        return 'Qualified Team Members (${downlineCounts[JoinWindow.newQualified]})';
       case JoinWindow.all:
         return 'All Team Members (${downlineCounts[JoinWindow.all]})';
       case JoinWindow.none:
@@ -221,9 +235,18 @@ class _DownlineTeamScreenState extends State<DownlineTeamScreen> {
                 ),
                 Padding(
                   padding: const EdgeInsets.fromLTRB(16, 16, 16, 8),
-                  child: DropdownButton<JoinWindow>(
+                  child: DropdownButtonFormField<JoinWindow>(
                     isExpanded: true,
                     value: selectedJoinWindow,
+                    decoration: InputDecoration(
+                      labelText: 'Downline Report',
+                      filled: true,
+                      fillColor: Colors.grey.shade100,
+                      border: OutlineInputBorder(
+                          borderRadius: BorderRadius.circular(12)),
+                      contentPadding: const EdgeInsets.symmetric(
+                          horizontal: 12, vertical: 12),
+                    ),
                     onChanged: (value) {
                       if (value != null) {
                         setState(() {
@@ -233,13 +256,15 @@ class _DownlineTeamScreenState extends State<DownlineTeamScreen> {
                         fetchDownline();
                       }
                     },
+                    // PATCH START
                     items: [
                       JoinWindow.none,
                       JoinWindow.all,
+                      JoinWindow.newQualified,
                       JoinWindow.last24,
                       JoinWindow.last7,
                       JoinWindow.last30,
-                      JoinWindow.newQualified,
+// PATCH END
                     ].map((window) {
                       return DropdownMenuItem(
                         value: window,
@@ -266,6 +291,42 @@ class _DownlineTeamScreenState extends State<DownlineTeamScreen> {
                         setState(() => _searchQuery = value);
                         fetchDownline();
                       },
+                    ),
+                  ),
+                if (selectedJoinWindow == JoinWindow.newQualified)
+                  Padding(
+                    padding:
+                        EdgeInsets.symmetric(horizontal: 16.0, vertical: 8),
+                    child: RichText(
+                      text: TextSpan(
+                        style: const TextStyle(
+                            fontSize: 14,
+                            fontWeight: FontWeight.w500,
+                            color: Colors.black),
+                        children: [
+                          const TextSpan(
+                              text:
+                                  'These downline members are qualified to join '),
+                          TextSpan(
+                            text: uplineBizOpp ?? '',
+                            style: const TextStyle(
+                              fontWeight: FontWeight.bold,
+                              color: Colors.blue,
+                            ),
+                          ),
+                          const TextSpan(
+                              text:
+                                  ' however, they have not yet completed their '),
+                          TextSpan(
+                            text: uplineBizOpp ?? '',
+                            style: const TextStyle(
+                              fontWeight: FontWeight.bold,
+                              color: Colors.blue,
+                            ),
+                          ),
+                          const TextSpan(text: ' registration.'),
+                        ],
+                      ),
                     ),
                   ),
                 if (selectedJoinWindow != JoinWindow.none)

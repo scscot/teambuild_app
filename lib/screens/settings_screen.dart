@@ -15,6 +15,10 @@ class SettingsScreen extends StatefulWidget {
 }
 
 class _SettingsScreenState extends State<SettingsScreen> {
+  final TextEditingController _directSponsorMinController =
+      TextEditingController();
+  final TextEditingController _totalTeamMinController = TextEditingController();
+
   final _formKey = GlobalKey<FormState>();
   final TextEditingController _bizNameController = TextEditingController();
   final TextEditingController _bizNameConfirmController =
@@ -75,6 +79,8 @@ class _SettingsScreenState extends State<SettingsScreen> {
         _bizRefUrl = bizRefUrl;
         _directSponsorMin = sponsorMin ?? 5;
         _totalTeamMin = teamMin ?? 10;
+        _directSponsorMinController.text = _directSponsorMin.toString();
+        _totalTeamMinController.text = _totalTeamMin.toString();
         _isLocked = _bizOpp != null && _bizRefUrl != null;
       });
     }
@@ -222,32 +228,42 @@ class _SettingsScreenState extends State<SettingsScreen> {
               const Text('Eligibility Requirements',
                   style: TextStyle(fontWeight: FontWeight.bold)),
               const SizedBox(height: 4),
-              Text(
-                "Once a downline member meets the minimum direct sponsor and total team size criteria, they'll receive an invitation and referral link to join ${_bizOpp ?? 'your business opportunity'}.",
+              Text.rich(
+                TextSpan(
+                  children: [
+                    const TextSpan(
+                      text:
+                          "Once a downline member meets the minimum direct sponsor and total team size criteria, they'll receive an invitation and referral link to join ",
+                    ),
+                    TextSpan(
+                      text: _bizOpp ?? 'your business opportunity',
+                      style: const TextStyle(
+                          color: Colors.blue, fontWeight: FontWeight.w500),
+                    ),
+                    const TextSpan(text: '.'),
+                  ],
+                ),
               ),
 
               TextFormField(
-                initialValue: _directSponsorMin.toString(),
+                controller: _directSponsorMinController,
                 decoration:
                     const InputDecoration(labelText: 'Minimum Direct Sponsors'),
                 keyboardType: TextInputType.number,
                 onChanged: (value) {
-                  setState(() {
-                    _directSponsorMin = int.tryParse(value) ?? 5;
-                  });
+                  _directSponsorMin = int.tryParse(value) ?? 5;
                 },
               ),
               TextFormField(
-                initialValue: _totalTeamMin.toString(),
+                controller: _totalTeamMinController,
                 decoration: const InputDecoration(
                     labelText: 'Minimum Total Team Members'),
                 keyboardType: TextInputType.number,
                 onChanged: (value) {
-                  setState(() {
-                    _totalTeamMin = int.tryParse(value) ?? 10;
-                  });
+                  _totalTeamMin = int.tryParse(value) ?? 10;
                 },
               ),
+
               const SizedBox(height: 24),
               Center(
                 child: Padding(
