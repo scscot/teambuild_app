@@ -9,8 +9,8 @@ import '../screens/share_screen.dart';
 import '../screens/login_screen.dart';
 import '../screens/dashboard_screen.dart';
 import '../screens/join_opportunity_screen.dart';
-import '../screens/new_registration_screen.dart';
 import '../services/session_manager.dart';
+import '../screens/new_registration_screen.dart';
 
 class AppHeaderWithMenu extends StatefulWidget implements PreferredSizeWidget {
   const AppHeaderWithMenu({super.key});

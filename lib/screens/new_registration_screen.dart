@@ -1,19 +1,14 @@
-// FINAL PATCHED — new_registration_screen.dart with upline qualification logic
-
-// ignore_for_file: use_build_context_synchronously
-
 import 'package:flutter/material.dart';
-
 import 'package:uuid/uuid.dart';
 import 'package:http/http.dart' as http;
 import 'dart:convert';
+import 'package:cloud_firestore/cloud_firestore.dart';
 import '../models/user_model.dart';
 import '../services/auth_service.dart';
 import '../services/firestore_service.dart';
 import '../services/session_manager.dart';
 import '../data/states_by_country.dart';
 import 'dashboard_screen.dart';
-import 'package:cloud_firestore/cloud_firestore.dart';
 
 class NewRegistrationScreen extends StatefulWidget {
   final String? referralCode;
@@ -38,9 +33,10 @@ class _NewRegistrationScreenState extends State<NewRegistrationScreen> {
   String? _sponsorName;
   String? _referredBy;
   String? _role;
+  String? _uplineAdmin;
+  List<String> _availableCountries = [];
   bool _isLoading = false;
-
-  bool isDevMode = false;
+  bool isDevMode = true;
 
   List<String> get states => statesByCountry[_selectedCountry] ?? [];
 
@@ -53,7 +49,7 @@ class _NewRegistrationScreenState extends State<NewRegistrationScreen> {
   Future<void> _initReferral() async {
     if (isDevMode) {
       setState(() {
-        _referredBy = 'KJ8uFnlhKhWgBa4NVcwT';
+        _referredBy = '537feec3';
       });
     }
 
@@ -70,12 +66,31 @@ class _NewRegistrationScreenState extends State<NewRegistrationScreen> {
 
       if (response.statusCode == 200) {
         final data = jsonDecode(response.body);
+        final sponsorName =
+            '${data['firstName'] ?? ''} ${data['lastName'] ?? ''}'.trim();
+        final referredBy = code;
+        final uplineAdminUid = data['upline_admin'];
+
         setState(() {
-          _sponsorName =
-              '${data['firstName'] ?? ''} ${data['lastName'] ?? ''}'.trim();
-          _referredBy = code;
+          _sponsorName = sponsorName;
+          _referredBy = referredBy;
+          _uplineAdmin = uplineAdminUid;
           _role = null;
         });
+
+        if (uplineAdminUid != null) {
+          final countriesResponse = await http.get(Uri.parse(
+              'https://us-central1-teambuilder-plus-fe74d.cloudfunctions.net/getCountriesByAdminUid?uid=$uplineAdminUid'));
+
+          if (countriesResponse.statusCode == 200) {
+            final countryData = jsonDecode(countriesResponse.body);
+            final countries = countryData['countries'];
+            if (countries is List) {
+              setState(
+                  () => _availableCountries = List<String>.from(countries));
+            }
+          }
+        }
       } else {
         debugPrint('❌ Referral lookup failed: ${response.statusCode}');
       }
@@ -105,9 +120,18 @@ class _NewRegistrationScreenState extends State<NewRegistrationScreen> {
     return 1;
   }
 
-  Future<void> _updateUplineCounts(String? referralCode) async {
-    if (referralCode == null || referralCode.isEmpty) return;
-    await FirestoreService().incrementUplineCounts(referralCode);
+  Future<void> _callSecureSponsorUpdate(String referralCode) async {
+    try {
+      final uri = Uri.parse(
+          'https://us-central1-teambuilder-plus-fe74d.cloudfunctions.net/incrementSponsorCounts');
+      final response = await http.post(uri,
+          headers: {'Content-Type': 'application/json'},
+          body: jsonEncode({'referralCode': referralCode}));
+      debugPrint(
+          '🔄 Sponsor update response: ${response.statusCode} ${response.body}');
+    } catch (e) {
+      debugPrint('❌ Error calling incrementSponsorCounts: $e');
+    }
   }
 
   Future<void> _qualifyUpline(String? referredBy) async {
@@ -115,7 +139,8 @@ class _NewRegistrationScreenState extends State<NewRegistrationScreen> {
     String? currentUid = referredBy;
 
     while (currentUid != null && currentUid.isNotEmpty) {
-      final userDoc = await FirestoreService().getUser(currentUid);
+      final userDoc =
+          await FirestoreService().getUserByReferralCode(currentUid);
       if (userDoc == null) break;
 
       final isAdmin = userDoc.role == 'admin';
@@ -127,10 +152,32 @@ class _NewRegistrationScreenState extends State<NewRegistrationScreen> {
 
       if (!isAdmin && !qualified && direct >= directMin && total >= totalMin) {
         await FirestoreService().updateUser(
-            currentUid, {'qualified_date': FieldValue.serverTimestamp()});
+            userDoc.uid, {'qualified_date': FieldValue.serverTimestamp()});
       }
       currentUid = userDoc.referredBy;
     }
+  }
+
+  Future<String> _generateUniqueReferralCode() async {
+    const int maxAttempts = 10;
+    const int codeLength = 6;
+    final random = Uuid();
+
+    for (int i = 0; i < maxAttempts; i++) {
+      final code = random
+          .v4()
+          .replaceAll('-', '')
+          .substring(0, codeLength)
+          .toUpperCase();
+      final snapshot = await FirebaseFirestore.instance
+          .collection('users')
+          .where('referralCode', isEqualTo: code)
+          .limit(1)
+          .get();
+      if (snapshot.docs.isEmpty) return code;
+    }
+    throw Exception(
+        'Unable to generate unique referral code after $maxAttempts attempts');
   }
 
   Future<void> _register() async {
@@ -142,9 +189,10 @@ class _NewRegistrationScreenState extends State<NewRegistrationScreen> {
       final password = _passwordController.text.trim();
 
       UserModel user = await AuthService().register(email, password);
-
       final referredBy = _referredBy;
       final level = await _getReferrerLevel(referredBy);
+      final referralCode = await _generateUniqueReferralCode();
+      final uplineAdmin = _role == 'admin' ? user.uid : _uplineAdmin;
 
       final newUser = UserModel(
         uid: user.uid,
@@ -155,16 +203,21 @@ class _NewRegistrationScreenState extends State<NewRegistrationScreen> {
         country: _selectedCountry,
         state: _selectedState,
         city: _cityController.text.trim(),
-        referralCode: const Uuid().v4().substring(0, 8),
+        referralCode: referralCode,
         referredBy: referredBy,
         level: level,
         directSponsorCount: 0,
         totalTeamCount: 0,
-        role: _role,
+        role: _role ?? 'user',
       );
 
-      await FirestoreService().createUser(newUser.toMap());
-      await _updateUplineCounts(referredBy);
+      final userMap = newUser.toMap();
+      userMap['upline_admin'] = uplineAdmin;
+
+      await FirestoreService().createUser(userMap);
+      if (referredBy != null && referredBy.isNotEmpty) {
+        await _callSecureSponsorUpdate(referredBy);
+      }
       await _qualifyUpline(referredBy);
       await SessionManager().setCurrentUser(newUser);
 
@@ -176,9 +229,11 @@ class _NewRegistrationScreenState extends State<NewRegistrationScreen> {
       }
     } catch (e) {
       debugPrint('❌ Registration error: $e');
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Registration failed: $e')),
-      );
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Registration failed: $e')),
+        );
+      }
     } finally {
       setState(() => _isLoading = false);
     }
@@ -254,7 +309,7 @@ class _NewRegistrationScreenState extends State<NewRegistrationScreen> {
               DropdownButtonFormField<String>(
                 value: _selectedCountry,
                 hint: const Text('Select Country'),
-                items: statesByCountry.keys
+                items: _availableCountries
                     .map((country) =>
                         DropdownMenuItem(value: country, child: Text(country)))
                     .toList(),

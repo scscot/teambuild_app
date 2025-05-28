@@ -31,13 +31,13 @@ class AuthService {
       final uid = result.user?.uid;
       if (uid == null) throw Exception('User ID not found after registration.');
 
-      final user = await FirestoreService().getUser(uid);
-      if (user == null) {
-        throw Exception('User not found in Firestore after registration.');
-      }
-
       debugPrint('✅ AuthService — Registration success. UID: $uid');
-      return user;
+
+      // Return minimal model — full Firestore hydration happens after profile creation
+      return UserModel(
+        uid: uid,
+        email: email,
+      );
     } catch (e) {
       debugPrint('❌ AuthService — Registration failed: $e');
       rethrow;
