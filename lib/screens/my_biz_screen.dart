@@ -74,7 +74,7 @@ class _MyBizScreenState extends State<MyBizScreen> {
                   ),
                   const SizedBox(height: 16),
                   _buildInfoCard(
-                    title: 'Referral Link',
+                    title: 'My Referral Link',
                     content: bizOppRefUrl ?? 'Not available',
                     icon: Icons.link,
                   ),

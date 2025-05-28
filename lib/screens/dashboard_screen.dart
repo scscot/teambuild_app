@@ -137,29 +137,6 @@ class _DashboardScreenState extends State<DashboardScreen> {
                   MaterialPageRoute(builder: (_) => const SettingsScreen()),
                 ),
               ),
-            if (user?.role != 'admin' &&
-                (user?.directSponsorCount ?? 0) >= (_directSponsorMin ?? 1) &&
-                (user?.totalTeamCount ?? 0) >= (_totalTeamMin ?? 1))
-              buildButton(
-                icon: Icons.play_arrow,
-                label: user?.bizOppRefUrl != null
-                    ? 'My Opportunity'
-                    : 'Join Opportunity',
-                onPressed: () {
-                  if (user?.bizOppRefUrl != null) {
-                    Navigator.push(
-                      context,
-                      MaterialPageRoute(builder: (_) => const MyBizScreen()),
-                    );
-                  } else {
-                    Navigator.push(
-                      context,
-                      MaterialPageRoute(
-                          builder: (_) => const JoinOpportunityScreen()),
-                    );
-                  }
-                },
-              ),
             buildButton(
               icon: Icons.person,
               label: 'My Profile',
@@ -179,6 +156,29 @@ class _DashboardScreenState extends State<DashboardScreen> {
                 ),
               ),
             ),
+            if (user?.role != 'admin' &&
+                (user?.directSponsorCount ?? 0) >= (_directSponsorMin ?? 1) &&
+                (user?.totalTeamCount ?? 0) >= (_totalTeamMin ?? 1))
+              buildButton(
+                icon: Icons.monetization_on,
+                label: user?.bizOppRefUrl != null
+                    ? 'My Opportunity'
+                    : 'Join Opportunity',
+                onPressed: () {
+                  if (user?.bizOppRefUrl != null) {
+                    Navigator.push(
+                      context,
+                      MaterialPageRoute(builder: (_) => const MyBizScreen()),
+                    );
+                  } else {
+                    Navigator.push(
+                      context,
+                      MaterialPageRoute(
+                          builder: (_) => const JoinOpportunityScreen()),
+                    );
+                  }
+                },
+              ),
             buildButton(
               icon: Icons.ios_share,
               label: 'Share App',
