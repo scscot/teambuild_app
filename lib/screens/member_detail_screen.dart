@@ -54,6 +54,41 @@ class _MemberDetailScreenState extends State<MemberDetailScreen> {
     return isAdmin || isDirectSponsor;
   }
 
+  // PATCH START: Conditional message access logic
+  void _handleSendMessage() {
+    final isAdmin = _currentUser!.referredBy == null;
+    final isDirectSponsor = _user!.referredBy == _currentUser!.referralCode;
+    final hasUpgrade = _currentUser!.toMap()['messagingUnlocked'] ?? false;
+
+    if (isAdmin && !isDirectSponsor && !hasUpgrade) {
+      showDialog(
+        context: context,
+        builder: (_) => AlertDialog(
+          title: const Text('Upgrade Required'),
+          content: const Text(
+              'To exchange messages with downline members you did not personally sponsor, you will need to upgrade your account.'),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.of(context).pop(),
+              child: const Text('Cancel'),
+            ),
+            TextButton(
+              onPressed: () {
+                Navigator.of(context).pop();
+                Navigator.pushNamed(context, '/upgrade');
+              },
+              child: const Text('Upgrade My Account'),
+            ),
+          ],
+        ),
+      );
+    } else {
+      // TODO: Navigate to messaging screen
+      debugPrint('✅ Proceed to message screen');
+    }
+  }
+  // PATCH END
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -94,7 +129,7 @@ class _MemberDetailScreenState extends State<MemberDetailScreen> {
                   if (_canSendMessage())
                     Center(
                       child: ElevatedButton.icon(
-                        onPressed: () {},
+                        onPressed: _handleSendMessage,
                         icon: const Icon(Icons.message),
                         label: const Text('Send Message'),
                         style: ElevatedButton.styleFrom(

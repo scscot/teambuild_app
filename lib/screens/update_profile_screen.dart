@@ -3,6 +3,7 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import '../widgets/header_widgets.dart';
 import 'my_biz_screen.dart';
+import '../services/session_manager.dart';
 
 class UpdateProfileScreen extends StatefulWidget {
   const UpdateProfileScreen({super.key});
@@ -17,11 +18,18 @@ class _UpdateProfileScreenState extends State<UpdateProfileScreen> {
   String? baseUrl;
   String? bizOpp;
   bool isSaving = false;
+  bool isUnlocked = false;
 
   @override
   void initState() {
     super.initState();
     _loadAdminData();
+    _checkUpgradeStatus();
+  }
+
+  Future<void> _checkUpgradeStatus() async {
+    final currentUser = await SessionManager().getCurrentUser();
+    setState(() => isUnlocked = currentUser?.messagingUnlocked ?? false);
   }
 
   Future<void> _loadAdminData() async {
@@ -49,6 +57,31 @@ class _UpdateProfileScreenState extends State<UpdateProfileScreen> {
   }
 
   Future<void> _submitReferral() async {
+    if (!isUnlocked) {
+      showDialog(
+        context: context,
+        builder: (_) => AlertDialog(
+          title: const Text('Upgrade Required'),
+          content: const Text(
+              'You must upgrade your TeamBuild Pro account to submit your unique business referral link.'),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.of(context).pop(),
+              child: const Text('Cancel'),
+            ),
+            TextButton(
+              onPressed: () {
+                Navigator.of(context).pop();
+                Navigator.pushNamed(context, '/upgrade');
+              },
+              child: const Text('Upgrade Now'),
+            ),
+          ],
+        ),
+      );
+      return;
+    }
+
     if (!_formKey.currentState!.validate() || baseUrl == null) return;
     final userInput = _refLinkController.text.trim();
 

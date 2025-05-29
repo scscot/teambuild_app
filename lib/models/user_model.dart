@@ -11,8 +11,8 @@ class UserModel {
   final String? referralCode;
   final String? referredBy;
   final String? photoUrl;
-  final String? bizOppRefUrl; // ✅ NEW FIELD
-  final String? uplineAdmin; // ✅ NEW FIELD
+  final String? bizOppRefUrl;
+  final String? uplineAdmin;
   final DateTime? createdAt;
   final DateTime? joined;
   final int? level;
@@ -22,6 +22,7 @@ class UserModel {
   final int? totalTeamMin;
   final String? role;
   final DateTime? qualifiedDate;
+  final bool? messagingUnlocked;
 
   UserModel({
     required this.uid,
@@ -35,7 +36,7 @@ class UserModel {
     this.referredBy,
     this.photoUrl,
     this.bizOppRefUrl,
-    this.uplineAdmin, // ✅ IN CONSTRUCTOR
+    this.uplineAdmin,
     this.createdAt,
     this.joined,
     this.level,
@@ -45,6 +46,7 @@ class UserModel {
     this.totalTeamMin,
     this.role,
     this.qualifiedDate,
+    this.messagingUnlocked,
   });
 
   Map<String, dynamic> toMap() {
@@ -60,7 +62,7 @@ class UserModel {
       'referredBy': referredBy,
       'photoUrl': photoUrl,
       'biz_opp_ref_url': bizOppRefUrl,
-      'upline_admin': uplineAdmin, // ✅ IN toMap
+      'upline_admin': uplineAdmin,
       'createdAt': createdAt?.toIso8601String(),
       'joined': joined?.toIso8601String(),
       'level': level,
@@ -70,6 +72,7 @@ class UserModel {
       'total_team_min': totalTeamMin,
       'role': role,
       'qualified_date': qualifiedDate?.toIso8601String(),
+      'messaging_unlocked': messagingUnlocked ?? false,
     };
   }
 
@@ -86,7 +89,7 @@ class UserModel {
       referredBy: map['referredBy'],
       photoUrl: map['photoUrl'],
       bizOppRefUrl: map['biz_opp_ref_url'],
-      uplineAdmin: map['upline_admin'], // ✅ IN fromMap
+      uplineAdmin: map['upline_admin'],
       createdAt: _parseTimestamp(map['createdAt']),
       joined: _parseTimestamp(map['joined']),
       level: map['level'],
@@ -96,6 +99,7 @@ class UserModel {
       totalTeamMin: map['total_team_min'],
       role: map['role'],
       qualifiedDate: _parseTimestamp(map['qualified_date']),
+      messagingUnlocked: map['messaging_unlocked'] ?? false,
     );
   }
 
@@ -123,7 +127,7 @@ class UserModel {
     String? referredBy,
     String? photoUrl,
     String? bizOppRefUrl,
-    String? uplineAdmin, // ✅ IN copyWith
+    String? uplineAdmin,
     DateTime? createdAt,
     DateTime? joined,
     int? level,
@@ -133,6 +137,7 @@ class UserModel {
     int? totalTeamMin,
     String? role,
     DateTime? qualifiedDate,
+    bool? messagingUnlocked,
   }) {
     return UserModel(
       uid: uid ?? this.uid,
@@ -146,7 +151,7 @@ class UserModel {
       referredBy: referredBy ?? this.referredBy,
       photoUrl: photoUrl ?? this.photoUrl,
       bizOppRefUrl: bizOppRefUrl ?? this.bizOppRefUrl,
-      uplineAdmin: uplineAdmin ?? this.uplineAdmin, // ✅ IN copyWith
+      uplineAdmin: uplineAdmin ?? this.uplineAdmin,
       createdAt: createdAt ?? this.createdAt,
       joined: joined ?? this.joined,
       level: level ?? this.level,
@@ -156,6 +161,7 @@ class UserModel {
       totalTeamMin: totalTeamMin ?? this.totalTeamMin,
       role: role ?? this.role,
       qualifiedDate: qualifiedDate ?? this.qualifiedDate,
+      messagingUnlocked: messagingUnlocked ?? this.messagingUnlocked,
     );
   }
 }

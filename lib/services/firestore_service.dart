@@ -48,6 +48,18 @@ class FirestoreService {
     }
   }
 
+  Future<void> updateMessagingUnlocked(String uid, bool unlocked) async {
+    try {
+      await _firestore.collection('users').doc(uid).update({
+        'messaging_unlocked': unlocked,
+      });
+      debugPrint('✅ messaging_unlocked updated to $unlocked for user $uid');
+    } catch (e) {
+      debugPrint('❌ Failed to update messaging_unlocked for $uid: $e');
+      rethrow;
+    }
+  }
+
   Future<String> getUserFullName(String uid) async {
     try {
       final doc = await _firestore.collection('users').doc(uid).get();

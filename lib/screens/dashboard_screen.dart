@@ -156,6 +156,15 @@ class _DashboardScreenState extends State<DashboardScreen> {
                 ),
               ),
             ),
+            // PATCH START — Add Message Center button
+            buildButton(
+              icon: Icons.message,
+              label: 'Message Center',
+              onPressed: () {
+                // TODO: Navigate to Message Center Screen
+              },
+            ),
+            // PATCH END
             if (user?.role != 'admin' &&
                 (user?.directSponsorCount ?? 0) >= (_directSponsorMin ?? 1) &&
                 (user?.totalTeamCount ?? 0) >= (_totalTeamMin ?? 1))
