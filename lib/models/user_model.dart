@@ -22,7 +22,7 @@ class UserModel {
   final int? totalTeamMin;
   final String? role;
   final DateTime? qualifiedDate;
-  final bool? messagingUnlocked;
+  final bool? isUpgraded;
 
   UserModel({
     required this.uid,
@@ -46,7 +46,7 @@ class UserModel {
     this.totalTeamMin,
     this.role,
     this.qualifiedDate,
-    this.messagingUnlocked,
+    this.isUpgraded,
   });
 
   Map<String, dynamic> toMap() {
@@ -72,7 +72,7 @@ class UserModel {
       'total_team_min': totalTeamMin,
       'role': role,
       'qualified_date': qualifiedDate?.toIso8601String(),
-      'messaging_unlocked': messagingUnlocked ?? false,
+      'is_upgraded': isUpgraded ?? false,
     };
   }
 
@@ -99,7 +99,7 @@ class UserModel {
       totalTeamMin: map['total_team_min'],
       role: map['role'],
       qualifiedDate: _parseTimestamp(map['qualified_date']),
-      messagingUnlocked: map['messaging_unlocked'] ?? false,
+      isUpgraded: map['is_upgraded'] ?? false,
     );
   }
 
@@ -137,7 +137,7 @@ class UserModel {
     int? totalTeamMin,
     String? role,
     DateTime? qualifiedDate,
-    bool? messagingUnlocked,
+    bool? isUpgraded,
   }) {
     return UserModel(
       uid: uid ?? this.uid,
@@ -161,7 +161,7 @@ class UserModel {
       totalTeamMin: totalTeamMin ?? this.totalTeamMin,
       role: role ?? this.role,
       qualifiedDate: qualifiedDate ?? this.qualifiedDate,
-      messagingUnlocked: messagingUnlocked ?? this.messagingUnlocked,
+      isUpgraded: isUpgraded ?? this.isUpgraded,
     );
   }
 }

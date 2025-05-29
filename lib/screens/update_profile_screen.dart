@@ -29,7 +29,7 @@ class _UpdateProfileScreenState extends State<UpdateProfileScreen> {
 
   Future<void> _checkUpgradeStatus() async {
     final currentUser = await SessionManager().getCurrentUser();
-    setState(() => isUnlocked = currentUser?.messagingUnlocked ?? false);
+    setState(() => isUnlocked = currentUser?.isUpgraded ?? false);
   }
 
   Future<void> _loadAdminData() async {
