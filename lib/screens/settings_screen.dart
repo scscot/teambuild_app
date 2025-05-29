@@ -29,6 +29,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
 
   List<String> _selectedCountries = [];
   bool _selectAllCountries = false;
+
   List<String> _originalSelectedCountries = [];
   int _directSponsorMin = 5;
   int _totalTeamMin = 10;
@@ -191,8 +192,23 @@ class _SettingsScreenState extends State<SettingsScreen> {
               const Text('Available Countries',
                   style: TextStyle(fontWeight: FontWeight.bold)),
               const SizedBox(height: 4),
-              const Text(
-                  "Select the countries where your business opportunity is currently available."),
+              Text.rich(
+                TextSpan(
+                  children: [
+                    TextSpan(
+                      text: 'Important:',
+                      style: TextStyle(
+                        fontWeight: FontWeight.bold,
+                        color: Colors.red,
+                      ),
+                    ),
+                    TextSpan(
+                      text:
+                          ' Only select the countries where your business opportunity is currently available.',
+                    ),
+                  ],
+                ),
+              ),
               CheckboxListTile(
                 title: const Text('Select All Countries'),
                 value: _selectAllCountries,
@@ -208,62 +224,149 @@ class _SettingsScreenState extends State<SettingsScreen> {
                   });
                 },
               ),
-              // PATCH START: Replace FilterChip layout with multi-select modal
               MultiSelectDialogField<String>(
                 items: allCountries
                     .map((e) => MultiSelectItem<String>(e, e))
                     .toList(),
                 initialValue: _selectedCountries,
-                title: const Text("Countries"),
-                buttonText: const Text("Select Individual Countries"),
+                title: const Text("Select Countries"),
+                buttonText: const Text("Or Select Individual Countries"),
                 searchable: true,
+                decoration: BoxDecoration(
+                  color: Colors.white,
+                  border: Border.all(
+                    color: Colors.deepPurple.shade200,
+                    width: 1.5,
+                  ),
+                  borderRadius: BorderRadius.circular(12),
+                ),
+                buttonIcon: Icon(
+                  Icons.arrow_drop_down,
+                  color: Colors.deepPurple,
+                ),
+                selectedColor: Colors.deepPurple,
+                dialogHeight: 500,
+                chipDisplay: MultiSelectChipDisplay(
+                  chipColor: Colors.deepPurple.shade100,
+                  textStyle: const TextStyle(color: Colors.black87),
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(8),
+                  ),
+                ),
                 onConfirm: (values) {
                   setState(() {
                     _selectedCountries = List.from(values);
                   });
                 },
               ),
-              // PATCH END
-              const SizedBox(height: 24),
-              const Text('Eligibility Requirements',
-                  style: TextStyle(fontWeight: FontWeight.bold)),
-              const SizedBox(height: 4),
+              const SizedBox(height: 20),
+              Center(
+                child: const Text(
+                  'TeamBuild Pro is your downline’s launchpad!',
+                  style: TextStyle(fontWeight: FontWeight.bold),
+                ),
+              ),
+              const SizedBox(height: 20),
               Text.rich(
                 TextSpan(
                   children: [
                     const TextSpan(
                       text:
-                          "Once a downline member meets the minimum direct sponsor and total team size criteria, they'll receive an invitation and referral link to join ",
+                          "It helps each member pre-build their team for free—before ever joining ",
                     ),
                     TextSpan(
                       text: _bizOpp ?? 'your business opportunity',
-                      style: const TextStyle(
+                      style: TextStyle(
                           color: Colors.blue, fontWeight: FontWeight.w500),
                     ),
-                    const TextSpan(text: '.'),
+                    TextSpan(
+                      text: ".",
+                    ),
+                    TextSpan(
+                      text:
+                          "\n\nOnce they meet the eligibility criteria you set below, they’ll automatically receive an invitation to join ",
+                    ),
+                    TextSpan(
+                      text: _bizOpp ?? 'business opportunity',
+                      style: TextStyle(
+                          color: Colors.blue, fontWeight: FontWeight.w500),
+                    ),
+                    const TextSpan(
+                      text:
+                          " with their entire pre-built TeamBuild Pro downline ready to follow them into your ",
+                    ),
+                    TextSpan(
+                      text: _bizOpp ?? 'your business opportunity',
+                      style: TextStyle(
+                          color: Colors.blue, fontWeight: FontWeight.w500),
+                    ),
+                    const TextSpan(text: ' organization.'),
+                    const TextSpan(
+                      text:
+                          "\n\nSet challenging requirements to ensure your downline members enter ",
+                    ),
+                    TextSpan(
+                      text: _bizOpp ?? 'your business opportunity',
+                      style: TextStyle(
+                          color: Colors.blue, fontWeight: FontWeight.w500),
+                    ),
+                    const TextSpan(
+                      text:
+                          " strong, aligned, and positioned for long-term success!",
+                    ),
                   ],
                 ),
               ),
-
-              TextFormField(
-                controller: _directSponsorMinController,
-                decoration:
-                    const InputDecoration(labelText: 'Minimum Direct Sponsors'),
-                keyboardType: TextInputType.number,
-                onChanged: (value) {
-                  _directSponsorMin = int.tryParse(value) ?? 5;
-                },
+              const SizedBox(height: 24),
+              Center(
+                // Wrap your Text widget with Center
+                child: Text(
+                  'Set Minimum Eligibility Requirements',
+                  style: TextStyle(fontSize: 16, fontWeight: FontWeight.w600),
+                ),
               ),
-              TextFormField(
-                controller: _totalTeamMinController,
-                decoration: const InputDecoration(
-                    labelText: 'Minimum Total Team Members'),
-                keyboardType: TextInputType.number,
-                onChanged: (value) {
-                  _totalTeamMin = int.tryParse(value) ?? 10;
-                },
+              const SizedBox(height: 12),
+              Row(
+                children: [
+                  Expanded(
+                    child: TextFormField(
+                      controller: _directSponsorMinController,
+                      decoration: InputDecoration(
+                        labelText: 'Direct Sponsors',
+                        filled: true,
+                        fillColor: Color(0xFFF5F5F5),
+                        contentPadding: const EdgeInsets.symmetric(
+                            horizontal: 16, vertical: 14),
+                        border: OutlineInputBorder(
+                            borderRadius: BorderRadius.circular(12)),
+                      ),
+                      keyboardType: TextInputType.number,
+                      onChanged: (value) {
+                        _directSponsorMin = int.tryParse(value) ?? 5;
+                      },
+                    ),
+                  ),
+                  const SizedBox(width: 16),
+                  Expanded(
+                    child: TextFormField(
+                      controller: _totalTeamMinController,
+                      decoration: InputDecoration(
+                        labelText: 'Total Team Members',
+                        filled: true,
+                        fillColor: Color(0xFFF5F5F5),
+                        contentPadding: const EdgeInsets.symmetric(
+                            horizontal: 16, vertical: 14),
+                        border: OutlineInputBorder(
+                            borderRadius: BorderRadius.circular(12)),
+                      ),
+                      keyboardType: TextInputType.number,
+                      onChanged: (value) {
+                        _totalTeamMin = int.tryParse(value) ?? 10;
+                      },
+                    ),
+                  ),
+                ],
               ),
-
               const SizedBox(height: 24),
               Center(
                 child: Padding(

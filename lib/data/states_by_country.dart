@@ -694,7 +694,6 @@ const Map<String, List<String>> statesByCountry = {
     'Āfar',
     'Āmara'
   ],
-  'Federated States of Micronesia': ['Chuuk', 'Kosrae', 'Pohnpei', 'Yap'],
   'Fiji': ['Central', 'Eastern', 'Northern', 'Rotuma', 'Western'],
   'Finland': [
     'Ahvenanmaan maakunta',
@@ -1510,7 +1509,6 @@ const Map<String, List<String>> statesByCountry = {
     'Rîşcani',
     'Soroca',
     'Străşeni',
-    'Stînga Nistrului, unitatea teritorială din',
     'Sîngerei',
     'Taraclia',
     'Teleneşti',
@@ -1779,16 +1777,6 @@ const Map<String, List<String>> statesByCountry = {
     'Masqaţ',
     'Musandam',
     'Z̧ufār'
-  ],
-  'Pakistan': [
-    'Azad Kashmir',
-    'Balochistan',
-    'Federally Administered Tribal Areas',
-    'Gilgit-Baltistan',
-    'Islamabad',
-    'Khyber Pakhtunkhwa',
-    'Punjab',
-    'Sindh'
   ],
   'Palau': [
     'Aimeliik',

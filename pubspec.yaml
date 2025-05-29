@@ -1,5 +1,5 @@
 name: tbp
-description: TeamBuild+ Clean Rebuild (Dart-only with REST)
+description: TeamBuild Clean Rebuild (Dart-only with SDK)
 publish_to: 'none'
 version: 1.0.0+1
 
