@@ -1,8 +1,11 @@
+// FINAL PATCH — MessageCenterScreen as Inbox-Only View (with Full Name & Profile Pics)
+
 import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import '../widgets/header_widgets.dart';
 import '../services/session_manager.dart';
 import '../services/firestore_service.dart';
+import 'message_thread_screen.dart';
 
 class MessageCenterScreen extends StatefulWidget {
   const MessageCenterScreen({super.key});
@@ -12,109 +15,48 @@ class MessageCenterScreen extends StatefulWidget {
 }
 
 class _MessageCenterScreenState extends State<MessageCenterScreen> {
-  final TextEditingController _messageController = TextEditingController();
-  final ScrollController _scrollController = ScrollController();
-  String? _errorText;
   final currentUser = SessionManager.instance;
-  final FirestoreService _firestoreService = FirestoreService();
+  final firestoreService = FirestoreService();
 
-  final urlPattern = RegExp(
-    r'(?:(?:https?:\/\/|www\.)[^\s/$.?#].[^\s]*)|(?:[a-zA-Z0-9](?:[a-zA-Z0-9-]{0,61}[a-zA-Z0-9])?\.)+(?:[a-zA-Z]{2,63})(?:\/[^\s]*)?',
-    caseSensitive: false,
-  );
+  String? _currentUserId;
+  final Map<String, String> _userNames = {}; // uid -> full name
+  final Map<String, String> _userPhotos = {}; // uid -> photo URL
 
-  final emailPattern = RegExp(
-    r'(?:\b[A-Z0-9._%+-]+(?:\s*\[at\]\s*|\s*\(at\)\s*)[A-Z0-9.-]+(?:\s*\[dot\]\s*|\s*\(dot\)\s*|\.)[A-Z]{2,6}\b)|(?:\b[A-Z0-9._%+-]+@[A-Z0-9.-]+\.[A-Z]{2,6}\b)',
-    caseSensitive: false,
-  );
-
-  final phonePattern = RegExp(
-    r'(?:\+?(\d{1,3}))?[-. (]*(\d{3})[-. )]*(\d{3})[-. ]*(\d{4})(?:\s*(?:ext|x|extension)\s*(\d+))?',
-    caseSensitive: false,
-  );
-
-  bool _containsProhibitedContent(String message) {
-    final lower = message.toLowerCase();
-    return urlPattern.hasMatch(lower) ||
-        emailPattern.hasMatch(lower) ||
-        phonePattern.hasMatch(lower);
+  @override
+  void initState() {
+    super.initState();
+    _loadCurrentUser();
   }
 
-  void _sendMessage() async {
-    final message = _messageController.text.trim();
-    if (_containsProhibitedContent(message)) {
-      setState(() {
-        _errorText = '❌ Links, emails, and phone numbers are not allowed.';
-      });
-      if (!mounted) return;
-      showDialog(
-        context: context,
-        builder: (_) => AlertDialog(
-          title: const Text('Invalid Content'),
-          content: const Text(
-              'Messages cannot contain website links, email addresses, or phone numbers.'),
-          actions: [
-            TextButton(
-              onPressed: () => Navigator.of(context).pop(),
-              child: const Text('OK'),
-            ),
-          ],
-        ),
-      );
-      return;
-    }
-
+  Future<void> _loadCurrentUser() async {
     final user = await currentUser.getCurrentUser();
-    if (user == null || !mounted) return;
-
-    try {
-      await _firestoreService.sendMessage(
-        senderId: user.uid,
-        recipientId: 'mockRecipientId', // Replace with actual recipient logic
-        text: message,
-      );
-
-      setState(() {
-        _errorText = null;
-        _messageController.clear();
-      });
-
-      if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('✅ Message sent')),
-      );
-
-      // Auto-scroll to bottom
-      Future.delayed(Duration(milliseconds: 300), () {
-        if (_scrollController.hasClients) {
-          _scrollController.animateTo(
-            0.0,
-            duration: const Duration(milliseconds: 300),
-            curve: Curves.easeOut,
-          );
-        }
-      });
-    } catch (e) {
-      debugPrint('❌ Failed to send message: $e');
-      if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('❌ Failed to send message')),
-      );
+    if (mounted && user != null) {
+      setState(() => _currentUserId = user.uid);
     }
   }
 
-  String _generateThreadId(String id1, String id2) {
-    final sorted = [id1, id2]..sort();
-    return '${sorted[0]}_${sorted[1]}';
+  Stream<QuerySnapshot> _getInboxThreads() {
+    return FirebaseFirestore.instance.collection('messages').snapshots();
   }
 
-  Stream<QuerySnapshot> _getMessagesStream(String threadId) {
-    return FirebaseFirestore.instance
-        .collection('messages')
-        .doc(threadId)
-        .collection('chat')
-        .orderBy('timestamp', descending: true)
-        .snapshots();
+  String _getOtherUserId(String threadId) {
+    final ids = threadId.split('_');
+    return (ids.length == 2 && _currentUserId != null)
+        ? (ids[0] == _currentUserId ? ids[1] : ids[0])
+        : '';
+  }
+
+  Future<void> _fetchNamesAndPhotos(List<String> uids) async {
+    final futures = uids.map((uid) async {
+      if (!_userNames.containsKey(uid)) {
+        final user = await firestoreService.getUser(uid);
+        if (user != null) {
+          _userNames[uid] = '${user.firstName} ${user.lastName}';
+          _userPhotos[uid] = user.photoUrl ?? '';
+        }
+      }
+    });
+    await Future.wait(futures);
   }
 
   @override
@@ -123,73 +65,108 @@ class _MessageCenterScreenState extends State<MessageCenterScreen> {
       appBar: AppHeaderWithMenu(),
       body: Padding(
         padding: const EdgeInsets.symmetric(horizontal: 16),
-        child: Column(crossAxisAlignment: CrossAxisAlignment.center, children: [
-          const Padding(
-            padding: EdgeInsets.only(top: 24.0),
-            child: Center(
-              child: Text(
-                'Message Center',
-                style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.center,
+          children: [
+            const Padding(
+              padding: EdgeInsets.only(top: 24.0),
+              child: Center(
+                child: Text(
+                  'Message Center',
+                  style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
+                ),
               ),
             ),
-          ),
-          const SizedBox(height: 16),
-          Expanded(
-            child: StreamBuilder<QuerySnapshot>(
-              stream: _getMessagesStream(
-                  _generateThreadId('mockUser', 'mockRecipientId')),
-              builder: (context, snapshot) {
-                if (snapshot.connectionState == ConnectionState.waiting) {
-                  return const Center(child: CircularProgressIndicator());
-                }
-                final messages = snapshot.data?.docs ?? [];
-                if (messages.isEmpty) {
-                  return const Center(
-                    child: Text('📨 No messages yet.',
-                        style: TextStyle(
-                            fontSize: 16, fontWeight: FontWeight.w500)),
-                  );
-                }
-                return ListView.builder(
-                  controller: _scrollController,
-                  reverse: true,
-                  itemCount: messages.length,
-                  itemBuilder: (context, index) {
-                    final data = messages[index].data() as Map<String, dynamic>;
-                    return ListTile(
-                      title: Text(data['text'] ?? ''),
-                      subtitle:
-                          Text(data['timestamp']?.toDate().toString() ?? ''),
-                    );
-                  },
-                );
-              },
+            const SizedBox(height: 16),
+            Expanded(
+              child: (_currentUserId == null)
+                  ? const Center(child: CircularProgressIndicator())
+                  : StreamBuilder<QuerySnapshot>(
+                      stream: _getInboxThreads(),
+                      builder: (context, snapshot) {
+                        if (snapshot.hasError) {
+                          return Text('Error: ${snapshot.error}');
+                        }
+                        if (snapshot.connectionState ==
+                            ConnectionState.waiting) {
+                          return const Center(
+                              child: CircularProgressIndicator());
+                        }
+
+                        final threads = snapshot.data?.docs ?? [];
+                        final userThreads = threads.where((doc) {
+                          final id = doc.id;
+                          return id.contains(_currentUserId!);
+                        }).toList();
+
+                        final otherUserIds = userThreads
+                            .map((doc) => _getOtherUserId(doc.id))
+                            .where((id) => id.isNotEmpty)
+                            .toSet()
+                            .toList();
+
+                        return FutureBuilder(
+                          future: _fetchNamesAndPhotos(otherUserIds),
+                          builder: (context, snapshot) {
+                            if (snapshot.connectionState ==
+                                ConnectionState.waiting) {
+                              return const Center(
+                                  child: CircularProgressIndicator());
+                            }
+
+                            if (userThreads.isEmpty) {
+                              return const Center(
+                                child: Text('📭 No conversations yet.',
+                                    style: TextStyle(
+                                        fontSize: 16,
+                                        fontWeight: FontWeight.w500)),
+                              );
+                            }
+
+                            return ListView.builder(
+                              itemCount: userThreads.length,
+                              itemBuilder: (context, index) {
+                                final doc = userThreads[index];
+                                final threadId = doc.id;
+                                final otherUserId = _getOtherUserId(threadId);
+                                final otherUserName =
+                                    _userNames[otherUserId] ?? otherUserId;
+                                final photoUrl = _userPhotos[otherUserId];
+
+                                return ListTile(
+                                  leading: CircleAvatar(
+                                    backgroundImage: (photoUrl != null &&
+                                            photoUrl.isNotEmpty)
+                                        ? NetworkImage(photoUrl)
+                                        : null,
+                                    child:
+                                        (photoUrl == null || photoUrl.isEmpty)
+                                            ? const Icon(Icons.person_outline)
+                                            : null,
+                                  ),
+                                  title: Text(otherUserName),
+                                  trailing: const Icon(Icons.chevron_right),
+                                  onTap: () {
+                                    Navigator.push(
+                                      context,
+                                      MaterialPageRoute(
+                                        builder: (_) => MessageThreadScreen(
+                                          recipientId: otherUserId,
+                                          recipientName: otherUserName,
+                                        ),
+                                      ),
+                                    );
+                                  },
+                                );
+                              },
+                            );
+                          },
+                        );
+                      },
+                    ),
             ),
-          ),
-          const SizedBox(height: 16),
-          Padding(
-            padding: const EdgeInsets.fromLTRB(8, 0, 8, 8),
-            child: TextField(
-              controller: _messageController,
-              decoration: InputDecoration(
-                hintText: 'Type your message...',
-                errorText: _errorText,
-                border: const OutlineInputBorder(),
-              ),
-              maxLines: 4,
-            ),
-          ),
-          Padding(
-            padding: const EdgeInsets.fromLTRB(8, 0, 8, 24),
-            child: SizedBox(
-              width: double.infinity,
-              child: ElevatedButton(
-                onPressed: _sendMessage,
-                child: const Text('Send Message'),
-              ),
-            ),
-          ),
-        ]),
+          ],
+        ),
       ),
     );
   }

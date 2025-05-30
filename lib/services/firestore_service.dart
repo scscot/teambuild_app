@@ -159,7 +159,7 @@ class FirestoreService {
     }
   }
 
-  // PATCH START: Send a message between users with optional extra data
+  // PATCH START: Send a message between users with allowedUsers thread metadata
   Future<void> sendMessage({
     required String senderId,
     required String recipientId,
@@ -167,6 +167,13 @@ class FirestoreService {
     Map<String, dynamic>? extraData,
   }) async {
     final threadId = _generateThreadId(senderId, recipientId);
+    final threadRef = _firestore.collection('messages').doc(threadId);
+
+    // Ensure allowedUsers field is present for Firestore rules
+    await threadRef.set({
+      'allowedUsers': [senderId, recipientId],
+    }, SetOptions(merge: true));
+
     final messageData = {
       'senderId': senderId,
       'recipientId': recipientId,
@@ -176,11 +183,7 @@ class FirestoreService {
       if (extraData != null) ...extraData,
     };
 
-    await _firestore
-        .collection('messages')
-        .doc(threadId)
-        .collection('chat')
-        .add(messageData);
+    await threadRef.collection('chat').add(messageData);
   }
   // PATCH END
 
