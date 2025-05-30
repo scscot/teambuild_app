@@ -100,7 +100,7 @@ class _MemberDetailScreenState extends State<MemberDetailScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: const AppHeaderWithBack(),
+      appBar: AppHeaderWithMenu(),
       body: _user == null
           ? const Center(child: CircularProgressIndicator())
           : SingleChildScrollView(

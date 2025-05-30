@@ -157,6 +157,14 @@ class _DashboardScreenState extends State<DashboardScreen> {
                 ),
               ),
             ),
+            buildButton(
+              icon: Icons.trending_up_rounded,
+              label: 'Grow My Team',
+              onPressed: () => Navigator.push(
+                context,
+                MaterialPageRoute(builder: (_) => ShareScreen()),
+              ),
+            ),
             // PATCH START — Add Message Center button
             buildButton(
               icon: Icons.message,
@@ -194,14 +202,6 @@ class _DashboardScreenState extends State<DashboardScreen> {
                   }
                 },
               ),
-            buildButton(
-              icon: Icons.ios_share,
-              label: 'Share App',
-              onPressed: () => Navigator.push(
-                context,
-                MaterialPageRoute(builder: (_) => ShareScreen()),
-              ),
-            ),
           ],
         ),
       ),
