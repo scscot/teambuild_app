@@ -9,6 +9,7 @@ import '../widgets/header_widgets.dart';
 import '../screens/settings_screen.dart';
 import '../screens/join_opportunity_screen.dart';
 import '../screens/my_biz_screen.dart';
+import '../screens/message_center_screen.dart';
 
 class DashboardScreen extends StatefulWidget {
   const DashboardScreen({super.key});
@@ -161,7 +162,12 @@ class _DashboardScreenState extends State<DashboardScreen> {
               icon: Icons.message,
               label: 'Message Center',
               onPressed: () {
-                // TODO: Navigate to Message Center Screen
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(
+                    builder: (context) => const MessageCenterScreen(),
+                  ),
+                );
               },
             ),
             // PATCH END

@@ -158,4 +158,34 @@ class FirestoreService {
       currentCode = data['referredBy'];
     }
   }
+
+  // PATCH START: Send a message between users with optional extra data
+  Future<void> sendMessage({
+    required String senderId,
+    required String recipientId,
+    required String text,
+    Map<String, dynamic>? extraData,
+  }) async {
+    final threadId = _generateThreadId(senderId, recipientId);
+    final messageData = {
+      'senderId': senderId,
+      'recipientId': recipientId,
+      'text': text,
+      'timestamp': FieldValue.serverTimestamp(),
+      'isRead': false,
+      if (extraData != null) ...extraData,
+    };
+
+    await _firestore
+        .collection('messages')
+        .doc(threadId)
+        .collection('chat')
+        .add(messageData);
+  }
+  // PATCH END
+
+  String _generateThreadId(String uid1, String uid2) {
+    final sortedIds = [uid1, uid2]..sort();
+    return '${sortedIds[0]}_${sortedIds[1]}';
+  }
 }

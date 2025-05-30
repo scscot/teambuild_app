@@ -4,6 +4,7 @@ import '../widgets/header_widgets.dart';
 import '../services/firestore_service.dart';
 import '../models/user_model.dart';
 import '../services/session_manager.dart';
+import 'message_thread_screen.dart';
 
 class MemberDetailScreen extends StatefulWidget {
   final String userId;
@@ -58,7 +59,7 @@ class _MemberDetailScreenState extends State<MemberDetailScreen> {
   void _handleSendMessage() {
     final isAdmin = _currentUser!.referredBy == null;
     final isDirectSponsor = _user!.referredBy == _currentUser!.referralCode;
-    final hasUpgrade = _currentUser!.toMap()['messagingUnlocked'] ?? false;
+    final hasUpgrade = _currentUser!.isUpgraded ?? false;
 
     if (isAdmin && !isDirectSponsor && !hasUpgrade) {
       showDialog(
@@ -83,8 +84,15 @@ class _MemberDetailScreenState extends State<MemberDetailScreen> {
         ),
       );
     } else {
-      // TODO: Navigate to messaging screen
-      debugPrint('✅ Proceed to message screen');
+      Navigator.push(
+        context,
+        MaterialPageRoute(
+          builder: (_) => MessageThreadScreen(
+            recipientId: _user!.uid,
+            recipientName: '${_user!.firstName} ${_user!.lastName}',
+          ),
+        ),
+      );
     }
   }
   // PATCH END
@@ -157,7 +165,7 @@ class _MemberDetailScreenState extends State<MemberDetailScreen> {
           SizedBox(
             width: 130,
             child: Text(
-              '$label:',
+              "$label:",
               style: const TextStyle(fontWeight: FontWeight.w600),
             ),
           ),

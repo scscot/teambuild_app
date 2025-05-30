@@ -11,6 +11,7 @@ import '../screens/dashboard_screen.dart';
 import '../screens/join_opportunity_screen.dart';
 import '../services/session_manager.dart';
 import '../screens/new_registration_screen.dart';
+import '../screens/message_center_screen.dart';
 
 class AppHeaderWithMenu extends StatefulWidget implements PreferredSizeWidget {
   const AppHeaderWithMenu({super.key});
@@ -78,6 +79,7 @@ class _AppHeaderWithMenuState extends State<AppHeaderWithMenu> {
   Widget build(BuildContext context) {
     final isLoginScreen = context.widget.runtimeType == LoginScreen ||
         context.widget.runtimeType == DashboardScreen ||
+        context.widget.runtimeType == MessageCenterScreen ||
         context.widget.runtimeType.toString().contains('HomePage') ||
         context.widget.runtimeType == NewRegistrationScreen;
 
@@ -145,6 +147,14 @@ class _AppHeaderWithMenuState extends State<AppHeaderWithMenu> {
                             builder: (_) => const JoinOpportunityScreen()),
                       );
                       break;
+                    case 'messages':
+                      if (!mounted) return;
+                      Navigator.push(
+                        context,
+                        MaterialPageRoute(
+                            builder: (_) => const MessageCenterScreen()),
+                      );
+                      break;
                     case 'logout':
                       await SessionManager().clearSession();
                       await FirebaseAuth.instance.signOut();
@@ -168,11 +178,15 @@ class _AppHeaderWithMenuState extends State<AppHeaderWithMenu> {
                   ),
                   const PopupMenuItem<String>(
                     value: 'profile',
-                    child: Text('Profile'),
+                    child: Text('My Profile'),
                   ),
                   const PopupMenuItem<String>(
                     value: 'downline',
-                    child: Text('Downline'),
+                    child: Text('My Downline'),
+                  ),
+                  const PopupMenuItem<String>(
+                    value: 'messages',
+                    child: Text('Messages Center'),
                   ),
                   const PopupMenuItem<String>(
                     value: 'share',
