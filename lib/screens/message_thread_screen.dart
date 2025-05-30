@@ -80,7 +80,7 @@ class _MessageThreadScreenState extends State<MessageThreadScreen> {
         : widget.recipientName;
 
     return Scaffold(
-      appBar: const AppHeaderWithBack(),
+      appBar: AppHeaderWithMenu(),
       body: Column(
         children: [
           const SizedBox(height: 16),
