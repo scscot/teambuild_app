@@ -6,6 +6,7 @@ import '../widgets/header_widgets.dart';
 import '../services/session_manager.dart';
 import '../services/firestore_service.dart';
 import 'message_thread_screen.dart';
+import '../services/subscription_service.dart';
 
 class MessageCenterScreen extends StatefulWidget {
   const MessageCenterScreen({super.key});
@@ -30,6 +31,34 @@ class _MessageCenterScreenState extends State<MessageCenterScreen> {
 
   Future<void> _loadCurrentUser() async {
     final user = await currentUser.getCurrentUser();
+
+    // PATCH START — Subscription check for Admin users
+    if (user != null && user.role == 'admin') {
+      final status =
+          await SubscriptionService.checkAdminSubscriptionStatus(user.uid);
+      final isActive = status['isActive'] == true;
+
+      if (!isActive && mounted) {
+        showDialog(
+          context: context,
+          barrierDismissible: false,
+          builder: (_) => AlertDialog(
+            title: const Text('Subscription Required'),
+            content: const Text(
+                'To access the Message Center, your Admin subscription must be active.'),
+            actions: [
+              TextButton(
+                onPressed: () => Navigator.pushNamed(context, '/upgrade'),
+                child: const Text('Upgrade Now'),
+              ),
+            ],
+          ),
+        );
+        return; // block loading threads
+      }
+    }
+    // PATCH END
+
     if (mounted && user != null) {
       setState(() => _currentUserId = user.uid);
     }
@@ -116,7 +145,7 @@ class _MessageCenterScreenState extends State<MessageCenterScreen> {
 
                             if (userThreads.isEmpty) {
                               return const Center(
-                                child: Text('📭 No conversations yet.',
+                                child: Text('📫 No conversations yet.',
                                     style: TextStyle(
                                         fontSize: 16,
                                         fontWeight: FontWeight.w500)),

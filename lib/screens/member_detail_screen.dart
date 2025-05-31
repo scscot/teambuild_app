@@ -5,6 +5,7 @@ import '../services/firestore_service.dart';
 import '../models/user_model.dart';
 import '../services/session_manager.dart';
 import 'message_thread_screen.dart';
+import '../services/subscription_service.dart';
 
 class MemberDetailScreen extends StatefulWidget {
   final String userId;
@@ -50,52 +51,56 @@ class _MemberDetailScreenState extends State<MemberDetailScreen> {
 
   bool _canSendMessage() {
     if (_user == null || _currentUser == null) return false;
-    final isAdmin = _currentUser!.referredBy == null;
+    final isAdmin = _currentUser!.role == 'admin';
     final isDirectSponsor = _user!.referredBy == _currentUser!.referralCode;
     return isAdmin || isDirectSponsor;
   }
 
   // PATCH START: Conditional message access logic
   void _handleSendMessage() {
-    final isAdmin = _currentUser!.referredBy == null;
     final isDirectSponsor = _user!.referredBy == _currentUser!.referralCode;
-    final hasUpgrade = _currentUser!.isUpgraded ?? false;
 
-    if (isAdmin && !isDirectSponsor && !hasUpgrade) {
-      showDialog(
-        context: context,
-        builder: (_) => AlertDialog(
-          title: const Text('Upgrade Required'),
-          content: const Text(
-              'To exchange messages with downline members you did not personally sponsor, you will need to upgrade your account.'),
-          actions: [
-            TextButton(
-              onPressed: () => Navigator.of(context).pop(),
-              child: const Text('Cancel'),
-            ),
-            TextButton(
-              onPressed: () {
-                Navigator.of(context).pop();
-                Navigator.pushNamed(context, '/upgrade');
-              },
-              child: const Text('Upgrade My Account'),
-            ),
-          ],
-        ),
-      );
-    } else {
-      Navigator.push(
-        context,
-        MaterialPageRoute(
-          builder: (_) => MessageThreadScreen(
-            recipientId: _user!.uid,
-            recipientName: '${_user!.firstName} ${_user!.lastName}',
+    SubscriptionService.checkAdminSubscriptionStatus(_currentUser!.uid)
+        .then((status) {
+      final isActive = status['isActive'] == true;
+      if (!mounted) return;
+
+      if (!isDirectSponsor && !isActive) {
+        showDialog(
+          context: context,
+          builder: (_) => AlertDialog(
+            title: const Text('Subscription Required'),
+            content: const Text(
+                'To message downline members you did not directly sponsor, please activate your admin subscription.'),
+            actions: [
+              TextButton(
+                onPressed: () => Navigator.of(context).pop(),
+                child: const Text('Cancel'),
+              ),
+              TextButton(
+                onPressed: () {
+                  Navigator.of(context).pop();
+                  Navigator.pushNamed(context, '/upgrade');
+                },
+                child: const Text('Upgrade Now'),
+              ),
+            ],
           ),
-        ),
-      );
-    }
+        );
+      } else {
+        Navigator.push(
+          context,
+          MaterialPageRoute(
+            builder: (_) => MessageThreadScreen(
+              recipientId: _user!.uid,
+              recipientName: '${_user!.firstName} ${_user!.lastName}',
+            ),
+          ),
+        );
+      }
+    });
   }
-  // PATCH END
+// PATCH END
 
   @override
   Widget build(BuildContext context) {

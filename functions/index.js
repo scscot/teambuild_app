@@ -1,10 +1,12 @@
 // 🔐 Enhanced Cloud Function Logic for Secure Sponsor Updates
 
-const { onRequest } = require("firebase-functions/v2/https");
+const { onRequest, onCall, HttpsError } = require("firebase-functions/v2/https");
 const { initializeApp } = require("firebase-admin/app");
 const { getFirestore, FieldValue } = require("firebase-admin/firestore");
+const admin = require("firebase-admin");
 
-initializeApp();
+admin.initializeApp();
+
 const db = getFirestore();
 
 // 🔹 SAFE: Public sponsor data only
@@ -109,5 +111,58 @@ exports.incrementSponsorCounts = onRequest(async (req, res) => {
   } catch (err) {
     console.error('🔥 Error in incrementSponsorCounts:', err);
     return res.status(500).json({ error: 'Internal server error' });
+  }
+});
+
+// 🔐 Check Admin subscription or trial status
+exports.checkAdminSubscriptionStatus = onCall(async (request) => {
+  const uid = request.data.uid;
+
+  if (!uid) {
+    throw new HttpsError('invalid-argument', 'User ID is required.');
+  }
+
+  try {
+    const userDoc = await admin.firestore().collection('users').doc(uid).get();
+    if (!userDoc.exists) {
+      throw new HttpsError('not-found', 'User not found.');
+    }
+
+    const userData = userDoc.data();
+    const role = userData.role || 'user';
+    if (role !== 'admin') {
+      return { isActive: true };
+    }
+
+    const now = new Date();
+    const trialStart = userData.trialStartAt?.toDate?.() || null;
+    const subscriptionExpiresAt = userData.subscriptionExpiresAt?.toDate?.() || null;
+
+    let isActive = false;
+    let trialExpired = true;
+    let daysRemaining = 0;
+
+    if (subscriptionExpiresAt && subscriptionExpiresAt > now) {
+      isActive = true;
+      daysRemaining = Math.ceil((subscriptionExpiresAt - now) / (1000 * 60 * 60 * 24));
+      trialExpired = true;
+    } else if (trialStart) {
+      const trialEnd = new Date(trialStart);
+      trialEnd.setDate(trialEnd.getDate() + 30);
+      if (trialEnd > now) {
+        isActive = true;
+        daysRemaining = Math.ceil((trialEnd - now) / (1000 * 60 * 60 * 24));
+        trialExpired = false;
+      }
+    }
+
+    return {
+      isActive,
+      daysRemaining,
+      trialExpired,
+    };
+  } catch (error) {
+    console.error('❌ Error in checkAdminSubscriptionStatus:', error);
+    throw new HttpsError('internal', 'Failed to verify subscription status.');
   }
 });

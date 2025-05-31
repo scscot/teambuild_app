@@ -6,6 +6,7 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import '../data/states_by_country.dart';
 import 'package:multi_select_flutter/multi_select_flutter.dart';
+import '../services/subscription_service.dart';
 
 class SettingsScreen extends StatefulWidget {
   const SettingsScreen({super.key});
@@ -33,10 +34,10 @@ class _SettingsScreenState extends State<SettingsScreen> {
   List<String> _originalSelectedCountries = [];
   int _directSponsorMin = 5;
   int _totalTeamMin = 10;
-  bool _isLocked = false;
   String? _userCountry;
   String? _bizOpp;
   String? _bizRefUrl;
+  bool _isBizLocked = false;
 
   List<String> get allCountries {
     final fullList = statesByCountry.keys.toList();
@@ -58,9 +59,11 @@ class _SettingsScreenState extends State<SettingsScreen> {
   Future<void> _loadUserSettings() async {
     final uid = FirebaseAuth.instance.currentUser?.uid;
     if (uid == null) return;
+
     final doc =
         await FirebaseFirestore.instance.collection('users').doc(uid).get();
     final data = doc.data();
+
     if (data != null) {
       final country = data['country'];
       final countries = List<String>.from(data['countries'] ?? []);
@@ -82,29 +85,66 @@ class _SettingsScreenState extends State<SettingsScreen> {
         _totalTeamMin = teamMin ?? 10;
         _directSponsorMinController.text = _directSponsorMin.toString();
         _totalTeamMinController.text = _totalTeamMin.toString();
-        _isLocked = _bizOpp != null && _bizRefUrl != null;
+
+        _bizNameController.text = _bizOpp ?? '';
+        _bizNameConfirmController.text = _bizOpp ?? '';
+        _refLinkController.text = _bizRefUrl ?? '';
+        _refLinkConfirmController.text = _refLinkController.text;
+        _isBizLocked =
+            (_bizOpp?.isNotEmpty ?? false) || (_bizRefUrl?.isNotEmpty ?? false);
       });
     }
   }
 
   Future<void> _submit() async {
     if (!_formKey.currentState!.validate()) return;
-    if (_bizNameController.text != _bizNameConfirmController.text ||
-        _refLinkController.text != _refLinkConfirmController.text) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Fields must match for confirmation.')),
-      );
-      return;
+
+    if (!_isBizLocked) {
+      if (_bizNameController.text != _bizNameConfirmController.text ||
+          _refLinkController.text != _refLinkConfirmController.text) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Fields must match for confirmation.')),
+        );
+        return;
+      }
     }
 
     final uid = FirebaseAuth.instance.currentUser?.uid;
     if (uid == null) return;
 
-    final userDoc = FirebaseFirestore.instance.collection('users').doc(uid);
+    final status = await SubscriptionService.checkAdminSubscriptionStatus(uid);
+    final isActive = status['isActive'] == true;
 
-    await userDoc.update({
-      if (!_isLocked) 'biz_opp': _bizNameController.text.trim(),
-      if (!_isLocked) 'biz_opp_ref_url': _refLinkController.text.trim(),
+    if (!isActive) {
+      showDialog(
+        context: context,
+        builder: (_) => AlertDialog(
+          title: const Text('Upgrade Required'),
+          content: const Text(
+              'Upgrade your Admin subscription to save these changes.'),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.of(context).pop(),
+              child: const Text('Cancel'),
+            ),
+            TextButton(
+              onPressed: () {
+                Navigator.of(context).pop();
+                Navigator.pushNamed(context, '/upgrade');
+              },
+              child: const Text('Upgrade Now'),
+            ),
+          ],
+        ),
+      );
+      return;
+    }
+
+    final settingsRef =
+        FirebaseFirestore.instance.collection('admin_settings').doc(uid);
+    await settingsRef.set({
+      if (!_isBizLocked) 'biz_opp': _bizNameController.text.trim(),
+      if (!_isBizLocked) 'biz_opp_ref_url': _refLinkController.text.trim(),
       'direct_sponsor_min': _directSponsorMin,
       'total_team_min': _totalTeamMin,
       'countries': _selectedCountries,
@@ -112,7 +152,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
 
     await _loadUserSettings();
     Scrollable.ensureVisible(_formKey.currentContext ?? context,
-        duration: Duration(milliseconds: 300));
+        duration: const Duration(milliseconds: 300));
 
     ScaffoldMessenger.of(context).showSnackBar(
       const SnackBar(content: Text('Settings saved successfully.')),
@@ -145,49 +185,72 @@ class _SettingsScreenState extends State<SettingsScreen> {
                 ),
               ),
               const SizedBox(height: 16),
-              if (_isLocked && _bizOpp != null && _bizRefUrl != null) ...[
-                const Text('Business Opportunity Name',
-                    style: TextStyle(fontWeight: FontWeight.bold)),
-                Text(_bizOpp!, style: const TextStyle(fontSize: 16)),
-                const SizedBox(height: 8),
-                const Text('Your Unique Referral Link',
-                    style: TextStyle(fontWeight: FontWeight.bold)),
-                Text(_bizRefUrl!, style: const TextStyle(fontSize: 16)),
-              ] else ...[
-                const Text(
-                    "Enter the name of your business opportunity. You can set this only once, and it cannot be changed later."),
-                TextFormField(
-                  controller: _bizNameController,
-                  enabled: !_isLocked,
-                  decoration: const InputDecoration(
-                      labelText: 'Business Opportunity Name'),
-                  validator: (value) => value!.isEmpty ? 'Required' : null,
-                ),
+              TextFormField(
+                controller: _bizNameController,
+                readOnly: _isBizLocked,
+                decoration: const InputDecoration(
+                    labelText: 'Business Opportunity Name'),
+                validator: (value) => value!.isEmpty ? 'Required' : null,
+              ),
+              if (!_isBizLocked)
                 TextFormField(
                   controller: _bizNameConfirmController,
-                  enabled: !_isLocked,
                   decoration: const InputDecoration(
                       labelText: 'Confirm Business Opportunity Name'),
                   validator: (value) => value!.isEmpty ? 'Required' : null,
                 ),
-                const SizedBox(height: 16),
-                const Text(
-                    "Enter your unique business opportunity referral link. You can set this only once, and it cannot be changed later."),
-                TextFormField(
-                  controller: _refLinkController,
-                  enabled: !_isLocked,
-                  decoration: const InputDecoration(
-                      labelText: 'Your Unique Referral Link URL'),
-                  validator: (value) => value!.isEmpty ? 'Required' : null,
+              const SizedBox(height: 16),
+              GestureDetector(
+                onTap: _isBizLocked
+                    ? null
+                    : () {
+                        showDialog(
+                          context: context,
+                          builder: (_) => AlertDialog(
+                            title: const Text(
+                              'Very Important!',
+                              style: TextStyle(
+                                  color: Colors.red,
+                                  fontWeight: FontWeight.bold),
+                            ),
+                            content: const Text(
+                                'You must enter the exact referral link you received from your company. '
+                                'This will ensure your TeamBuild Pro downline members that join your business opportunity '
+                                'are automatically placed in your business opportunity downline.'),
+                            actions: [
+                              TextButton(
+                                onPressed: () => Navigator.of(context).pop(),
+                                child: const Text('I Understand'),
+                              ),
+                            ],
+                          ),
+                        );
+                      },
+                child: AbsorbPointer(
+                  absorbing: _isBizLocked,
+                  child: Column(
+                    children: [
+                      TextFormField(
+                        controller: _refLinkController,
+                        readOnly: _isBizLocked,
+                        decoration: const InputDecoration(
+                            labelText: 'Your Unique Referral Link URL'),
+                        validator: (value) =>
+                            value!.isEmpty ? 'Required' : null,
+                      ),
+                      if (!_isBizLocked)
+                        TextFormField(
+                          controller: _refLinkConfirmController,
+                          decoration: const InputDecoration(
+                            labelText: 'Confirm Referral Link URL',
+                          ),
+                          validator: (value) =>
+                              value!.isEmpty ? 'Required' : null,
+                        ),
+                    ],
+                  ),
                 ),
-                TextFormField(
-                  controller: _refLinkConfirmController,
-                  enabled: !_isLocked,
-                  decoration: const InputDecoration(
-                      labelText: 'Confirm Referral Link URL'),
-                  validator: (value) => value!.isEmpty ? 'Required' : null,
-                ),
-              ],
+              ),
               const SizedBox(height: 24),
               const Text('Available Countries',
                   style: TextStyle(fontWeight: FontWeight.bold)),
@@ -195,14 +258,12 @@ class _SettingsScreenState extends State<SettingsScreen> {
               Text.rich(
                 TextSpan(
                   children: [
-                    TextSpan(
+                    const TextSpan(
                       text: 'Important:',
                       style: TextStyle(
-                        fontWeight: FontWeight.bold,
-                        color: Colors.red,
-                      ),
+                          fontWeight: FontWeight.bold, color: Colors.red),
                     ),
-                    TextSpan(
+                    const TextSpan(
                       text:
                           ' Only select the countries where your business opportunity is currently available.',
                     ),
@@ -240,7 +301,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
                   ),
                   borderRadius: BorderRadius.circular(12),
                 ),
-                buttonIcon: Icon(
+                buttonIcon: const Icon(
                   Icons.arrow_drop_down,
                   color: Colors.deepPurple,
                 ),
@@ -260,8 +321,8 @@ class _SettingsScreenState extends State<SettingsScreen> {
                 },
               ),
               const SizedBox(height: 20),
-              Center(
-                child: const Text(
+              const Center(
+                child: Text(
                   'TeamBuild Pro is your downline’s launchpad!',
                   style: TextStyle(fontWeight: FontWeight.bold),
                 ),
@@ -271,55 +332,45 @@ class _SettingsScreenState extends State<SettingsScreen> {
                 TextSpan(
                   children: [
                     const TextSpan(
-                      text:
-                          "It helps each member pre-build their team for free—before ever joining ",
-                    ),
+                        text:
+                            "It helps each member pre-build their team for free—before ever joining "),
                     TextSpan(
                       text: _bizOpp ?? 'your business opportunity',
-                      style: TextStyle(
+                      style: const TextStyle(
                           color: Colors.blue, fontWeight: FontWeight.w500),
                     ),
-                    TextSpan(
-                      text: ".",
-                    ),
-                    TextSpan(
-                      text:
-                          "\n\nOnce they meet the eligibility criteria you set below, they’ll automatically receive an invitation to join ",
-                    ),
+                    const TextSpan(
+                        text:
+                            ".\n\nOnce they meet the eligibility criteria you set below, they’ll automatically receive an invitation to join "),
                     TextSpan(
                       text: _bizOpp ?? 'business opportunity',
-                      style: TextStyle(
+                      style: const TextStyle(
                           color: Colors.blue, fontWeight: FontWeight.w500),
                     ),
                     const TextSpan(
-                      text:
-                          " with their entire pre-built TeamBuild Pro downline ready to follow them into your ",
-                    ),
+                        text:
+                            " with their entire pre-built TeamBuild Pro downline ready to follow them into your "),
                     TextSpan(
                       text: _bizOpp ?? 'your business opportunity',
-                      style: TextStyle(
+                      style: const TextStyle(
                           color: Colors.blue, fontWeight: FontWeight.w500),
                     ),
-                    const TextSpan(text: ' organization.'),
                     const TextSpan(
-                      text:
-                          "\n\nSet challenging requirements to ensure your downline members enter ",
-                    ),
+                        text:
+                            ' organization.\n\nSet challenging requirements to ensure your downline members enter '),
                     TextSpan(
                       text: _bizOpp ?? 'your business opportunity',
-                      style: TextStyle(
+                      style: const TextStyle(
                           color: Colors.blue, fontWeight: FontWeight.w500),
                     ),
                     const TextSpan(
-                      text:
-                          " strong, aligned, and positioned for long-term success!",
-                    ),
+                        text:
+                            " strong, aligned, and positioned for long-term success!"),
                   ],
                 ),
               ),
               const SizedBox(height: 24),
-              Center(
-                // Wrap your Text widget with Center
+              const Center(
                 child: Text(
                   'Set Minimum Eligibility Requirements',
                   style: TextStyle(fontSize: 16, fontWeight: FontWeight.w600),
@@ -334,7 +385,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
                       decoration: InputDecoration(
                         labelText: 'Direct Sponsors',
                         filled: true,
-                        fillColor: Color(0xFFF5F5F5),
+                        fillColor: const Color(0xFFF5F5F5),
                         contentPadding: const EdgeInsets.symmetric(
                             horizontal: 16, vertical: 14),
                         border: OutlineInputBorder(
@@ -353,7 +404,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
                       decoration: InputDecoration(
                         labelText: 'Total Team Members',
                         filled: true,
-                        fillColor: Color(0xFFF5F5F5),
+                        fillColor: const Color(0xFFF5F5F5),
                         contentPadding: const EdgeInsets.symmetric(
                             horizontal: 16, vertical: 14),
                         border: OutlineInputBorder(

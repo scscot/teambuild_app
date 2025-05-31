@@ -56,8 +56,8 @@ class _DashboardScreenState extends State<DashboardScreen> {
           .get();
 
       final int directSponsorMin =
-          adminSettings.data()?['direct_sponsor_min'] ?? 1;
-      final int totalTeamMin = adminSettings.data()?['total_team_min'] ?? 1;
+          adminSettings.data()?['direct_sponsor_min'] ?? 5;
+      final int totalTeamMin = adminSettings.data()?['total_team_min'] ?? 20;
 
       debugPrint('🔎 Firestore values:');
       debugPrint('  🔸 directSponsorMin: $directSponsorMin');

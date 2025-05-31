@@ -13,6 +13,7 @@ import '../services/firestore_service.dart';
 import 'edit_profile_screen.dart';
 import 'login_screen.dart';
 import '../widgets/header_widgets.dart';
+import '../services/subscription_service.dart';
 
 class ProfileScreen extends StatefulWidget {
   const ProfileScreen({super.key});
@@ -71,9 +72,42 @@ class _ProfileScreenState extends State<ProfileScreen> {
     }
   }
 
-  void _showImageSourceActionSheetWrapper() {
+// PATCH START — Guard profile image upload for unsubscribed Admins
+  void _showImageSourceActionSheetWrapper() async {
+    if (_user?.role == 'admin') {
+      final status =
+          await SubscriptionService.checkAdminSubscriptionStatus(_user!.uid);
+      final isActive = status['isActive'] == true;
+
+      if (!isActive) {
+        showDialog(
+          context: context,
+          builder: (_) => AlertDialog(
+            title: const Text('Subscription Required'),
+            content: const Text(
+                'To upload a profile image, please activate your Admin subscription.'),
+            actions: [
+              TextButton(
+                onPressed: () => Navigator.of(context).pop(),
+                child: const Text('Cancel'),
+              ),
+              TextButton(
+                onPressed: () {
+                  Navigator.of(context).pop();
+                  Navigator.pushNamed(context, '/upgrade');
+                },
+                child: const Text('Upgrade Now'),
+              ),
+            ],
+          ),
+        );
+        return;
+      }
+    }
+
     _showImageSourceActionSheet(context);
   }
+// PATCH END
 
   Future<void> _showImageSourceActionSheet(BuildContext context) async {
     final source = await showModalBottomSheet<ImageSource>(

@@ -215,6 +215,35 @@ class _DownlineTeamScreenState extends State<DownlineTeamScreen> {
     }
   }
 
+  Future<List<Map<String, dynamic>>> fetchEligibleDownlineUsers() async {
+    final uid = FirebaseAuth.instance.currentUser?.uid;
+    if (uid == null) return [];
+
+    final settingsDoc = await FirebaseFirestore.instance
+        .collection('admin_settings')
+        .doc(uid)
+        .get();
+    if (!settingsDoc.exists) return [];
+
+    final settings = settingsDoc.data();
+    final directMin = settings?['direct_sponsor_min'] ?? 1;
+    final totalMin = settings?['total_team_min'] ?? 1;
+    final allowedCountries = List<String>.from(settings?['countries'] ?? []);
+
+    final querySnapshot = await FirebaseFirestore.instance
+        .collection('users')
+        .where('upline_admin', isEqualTo: uid)
+        .get();
+
+    return querySnapshot.docs
+        .map((doc) => doc.data())
+        .where((user) =>
+            (user['direct_sponsor_count'] ?? 0) >= directMin &&
+            (user['total_team_count'] ?? 0) >= totalMin &&
+            allowedCountries.contains(user['country']))
+        .toList();
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
