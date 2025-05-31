@@ -3,7 +3,6 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import '../widgets/header_widgets.dart';
 import 'my_biz_screen.dart';
-import '../services/session_manager.dart';
 
 class UpdateProfileScreen extends StatefulWidget {
   const UpdateProfileScreen({super.key});
@@ -24,12 +23,6 @@ class _UpdateProfileScreenState extends State<UpdateProfileScreen> {
   void initState() {
     super.initState();
     _loadAdminData();
-    _checkUpgradeStatus();
-  }
-
-  Future<void> _checkUpgradeStatus() async {
-    final currentUser = await SessionManager().getCurrentUser();
-    setState(() => isUnlocked = currentUser?.isUpgraded ?? false);
   }
 
   Future<void> _loadAdminData() async {
