@@ -64,8 +64,10 @@ class _MessageCenterScreenState extends State<MessageCenterScreen> {
     }
   }
 
-  Stream<QuerySnapshot> _getInboxThreads() {
-    return FirebaseFirestore.instance.collection('messages').snapshots();
+  Future<List<QueryDocumentSnapshot>> _getInboxThreads() async {
+    final snapshot =
+        await FirebaseFirestore.instance.collection('messages').get();
+    return snapshot.docs;
   }
 
   String _getOtherUserId(String threadId) {
@@ -110,8 +112,8 @@ class _MessageCenterScreenState extends State<MessageCenterScreen> {
             Expanded(
               child: (_currentUserId == null)
                   ? const Center(child: CircularProgressIndicator())
-                  : StreamBuilder<QuerySnapshot>(
-                      stream: _getInboxThreads(),
+                  : FutureBuilder<List<QueryDocumentSnapshot>>(
+                      future: _getInboxThreads(),
                       builder: (context, snapshot) {
                         if (snapshot.hasError) {
                           return Text('Error: ${snapshot.error}');
@@ -122,7 +124,7 @@ class _MessageCenterScreenState extends State<MessageCenterScreen> {
                               child: CircularProgressIndicator());
                         }
 
-                        final threads = snapshot.data?.docs ?? [];
+                        final threads = snapshot.data ?? [];
                         final userThreads = threads.where((doc) {
                           final id = doc.id;
                           return id.contains(_currentUserId!);

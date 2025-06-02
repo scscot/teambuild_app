@@ -12,6 +12,7 @@ class NotificationsScreen extends StatefulWidget {
 
 class _NotificationsScreenState extends State<NotificationsScreen> {
   String? _uid;
+  Future<List<QueryDocumentSnapshot>>? _notificationsFuture;
 
   @override
   void initState() {
@@ -22,13 +23,26 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
   Future<void> _loadUserId() async {
     final user = await SessionManager.instance.getCurrentUser();
     if (user != null && mounted) {
-      setState(() => _uid = user.uid);
+      setState(() {
+        _uid = user.uid;
+        _notificationsFuture = _fetchNotifications(user.uid);
+      });
     }
+  }
+
+  Future<List<QueryDocumentSnapshot>> _fetchNotifications(String uid) async {
+    final snapshot = await FirebaseFirestore.instance
+        .collection('users')
+        .doc(uid)
+        .collection('notifications')
+        .orderBy('timestamp', descending: true)
+        .get();
+    return snapshot.docs;
   }
 
   @override
   Widget build(BuildContext context) {
-    if (_uid == null) {
+    if (_uid == null || _notificationsFuture == null) {
       return const Scaffold(
         body: Center(child: CircularProgressIndicator()),
       );
@@ -50,13 +64,8 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
           ),
           const SizedBox(height: 12),
           Expanded(
-            child: StreamBuilder<QuerySnapshot>(
-              stream: FirebaseFirestore.instance
-                  .collection('users')
-                  .doc(_uid)
-                  .collection('notifications')
-                  .orderBy('timestamp', descending: true)
-                  .snapshots(),
+            child: FutureBuilder<List<QueryDocumentSnapshot>>(
+              future: _notificationsFuture,
               builder: (context, snapshot) {
                 if (snapshot.hasError) {
                   return const Center(
@@ -66,7 +75,7 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
                   return const Center(child: CircularProgressIndicator());
                 }
 
-                final docs = snapshot.data?.docs ?? [];
+                final docs = snapshot.data ?? [];
                 if (docs.isEmpty) {
                   return const Center(child: Text('No notifications yet.'));
                 }
@@ -130,6 +139,9 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
                                 .collection('notifications')
                                 .doc(doc.id)
                                 .delete();
+                            setState(() {
+                              _notificationsFuture = _fetchNotifications(_uid!);
+                            });
                           },
                         ),
                         onTap: () async {
@@ -139,9 +151,7 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
                               .collection('notifications')
                               .doc(doc.id)
                               .update({'read': true});
-
                           if (!context.mounted) return;
-
                           showDialog(
                             context: context,
                             builder: (_) => AlertDialog(

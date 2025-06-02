@@ -71,13 +71,13 @@ class _MessageThreadScreenState extends State<MessageThreadScreen> {
     return '${sorted[0]}_${sorted[1]}';
   }
 
-  Stream<QuerySnapshot> _getMessages() {
+  Future<QuerySnapshot> _getMessagesOnce() {
     return FirebaseFirestore.instance
         .collection('messages')
         .doc(_threadId)
         .collection('chat')
         .orderBy('timestamp', descending: false)
-        .snapshots();
+        .get();
   }
 
   Future<void> _sendMessage() async {
@@ -129,8 +129,8 @@ class _MessageThreadScreenState extends State<MessageThreadScreen> {
           ),
           const Divider(height: 32),
           Expanded(
-            child: StreamBuilder<QuerySnapshot>(
-              stream: _getMessages(),
+            child: FutureBuilder<QuerySnapshot>(
+              future: _getMessagesOnce(),
               builder: (context, snapshot) {
                 if (snapshot.hasError) {
                   return Center(child: Text('Error: ${snapshot.error}'));

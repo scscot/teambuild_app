@@ -30,7 +30,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
   void initState() {
     super.initState();
     _loadUserAndSettings();
-    _listenForUnreadNotifications();
+    _fetchUnreadNotificationCount();
   }
 
   Future<void> _loadUserAndSettings() async {
@@ -56,6 +56,9 @@ class _DashboardScreenState extends State<DashboardScreen> {
           adminSettings.data()?['direct_sponsor_min'] ?? 5;
       final int totalTeamMin = adminSettings.data()?['total_team_min'] ?? 20;
 
+      debugPrint('📊 directSponsorMin from Firestore: $directSponsorMin');
+      debugPrint('📊 totalTeamMin from Firestore: $totalTeamMin');
+
       final userDoc = await FirebaseFirestore.instance
           .collection('users')
           .doc(sessionUser.uid)
@@ -78,19 +81,22 @@ class _DashboardScreenState extends State<DashboardScreen> {
     }
   }
 
-  void _listenForUnreadNotifications() async {
+  Future<void> _fetchUnreadNotificationCount() async {
     final user = await SessionManager().getCurrentUser();
     if (user == null) return;
 
-    FirebaseFirestore.instance
-        .collection('users')
-        .doc(user.uid)
-        .collection('notifications')
-        .where('read', isEqualTo: false)
-        .snapshots()
-        .listen((snapshot) {
+    try {
+      final snapshot = await FirebaseFirestore.instance
+          .collection('users')
+          .doc(user.uid)
+          .collection('notifications')
+          .where('read', isEqualTo: false)
+          .get();
+
       setState(() => _unreadNotificationCount = snapshot.docs.length);
-    });
+    } catch (e) {
+      debugPrint('⚠️ Error fetching unread notification count: $e');
+    }
   }
 
   Widget buildButton({

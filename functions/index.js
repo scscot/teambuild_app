@@ -2,6 +2,7 @@
 
 const { onRequest } = require("firebase-functions/v2/https");
 const { onCall } = require("firebase-functions/v2/https");
+const { onDocumentCreated } = require("firebase-functions/v2/firestore");
 const { initializeApp } = require("firebase-admin/app");
 const { getFirestore, FieldValue, Timestamp } = require("firebase-admin/firestore");
 const functions = require("firebase-functions");
@@ -9,6 +10,7 @@ const admin = require("firebase-admin");
 
 initializeApp();
 const db = getFirestore();
+const messaging = admin.messaging();
 
 // 🔹 SAFE: Public sponsor data only
 exports.getUserByReferralCode = onRequest(async (req, res) => {
@@ -49,7 +51,6 @@ exports.getCountriesByAdminUid = onRequest(async (req, res) => {
 
     const data = doc.data();
 
-    // ✅ Ensure user has role = 'admin'
     if (data.role !== 'admin') {
       return res.status(403).json({ error: 'User is not an Admin' });
     }
@@ -107,7 +108,6 @@ exports.incrementSponsorCounts = onRequest(async (req, res) => {
 
       await userRef.update(updates);
 
-      // ✅ Check eligibility and send invite (first-level only)
       if (level === 0) {
         await checkEligibilityAndSendInvite(currentUid);
       }
@@ -176,6 +176,40 @@ exports.checkAdminSubscriptionStatus = functions.https.onCall(async (data, conte
   }
 });
 
+// 🔔 Send FCM push notification on in-app notification creation (v2-compatible)
+exports.sendPushNotification = onDocumentCreated("users/{userId}/notifications/{notificationId}", async (event) => {
+  const snap = event.data;
+  const context = event;
+
+  const userId = context.params.userId;
+  const notificationData = snap?.data();
+
+  const userDoc = await db.collection("users").doc(userId).get();
+  const fcmToken = userDoc.data()?.fcm_token;
+
+  if (!fcmToken) {
+    console.log(`❌ No FCM token for user ${userId}`);
+    return null;
+  }
+
+  const message = {
+    token: fcmToken,
+    notification: {
+      title: notificationData?.title || "New Alert",
+      body: notificationData?.message || "You have a new notification in TeamBuild Pro",
+    },
+    android: { notification: { sound: "default" } },
+    apns: { payload: { aps: { sound: "default" } } },
+  };
+
+  try {
+    const response = await messaging.send(message);
+    console.log(`✅ FCM push sent: ${response}`);
+  } catch (error) {
+    console.error(`❌ Failed to send FCM push:`, error);
+  }
+});
+
 // 🔐 Auto-check eligibility and invite user
 async function checkEligibilityAndSendInvite(uid) {
   const userDoc = await db.collection('users').doc(uid).get();
@@ -203,7 +237,6 @@ async function checkEligibilityAndSendInvite(uid) {
 
   if (!isEligible) return;
 
-  // Check for existing invite
   const existing = await db.collection('invites')
     .where('toUserId', '==', uid)
     .where('fromAdminId', '==', adminId)
@@ -212,7 +245,6 @@ async function checkEligibilityAndSendInvite(uid) {
 
   if (!existing.empty) return;
 
-  // 🎯 Add invite to 'invites' collection
   await db.collection('invites').add({
     fromAdminId: adminId,
     toUserId: uid,
@@ -222,18 +254,18 @@ async function checkEligibilityAndSendInvite(uid) {
     status: 'sent',
   });
 
-  // ✅ Also add personalized notification
   await db.collection('users')
     .doc(uid)
     .collection('notifications')
     .add({
       type: 'invitation',
       title: `🎉 Congratulations!`,
-      message: `Your hard work has paid off! You’re now qualified to join ${settings.biz_opp || 'a business opportunity'}.\n\nVisit your Dashboard and click ‘Join Opportunity’ to get started.`,
+      message: `Your hard work has paid off! You’re now qualified to join ${settings.biz_opp || 'a business opportunity'}.
+
+Visit your Dashboard and click ‘Join Opportunity’ to get started.`,
       timestamp: Timestamp.now(),
       read: false,
     });
 
   console.log(`✅ Invite + notification sent to user ${uid} from admin ${adminId}`);
 }
-
