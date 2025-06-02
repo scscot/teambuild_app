@@ -156,7 +156,7 @@ class _JoinOpportunityScreenState extends State<JoinOpportunityScreen> {
             ),
             const SizedBox(height: 16),
             Text(
-              "You've reached a key milestone in TeamBuild Pro — you've personally sponsored $currentDirect member(s) and your total downline is now $currentTeam.\n\nYou're now eligible to register for $bizOpp!\n\nYour sponsor will be $sponsorName — the first person in your TeamBuild Pro upline who has already registered for $bizOpp. This might be different from your original TeamBuild Pro sponsor.",
+              "You've reached a key milestone in TeamBuild Pro — you've personally sponsored $currentDirect members and your total downline is now $currentTeam.\n\nYou're now eligible to register for $bizOpp!\n\nYour sponsor will be $sponsorName — the first person in your TeamBuild Pro upline who has already registered for $bizOpp. This might be different from your original TeamBuild Pro sponsor.",
             ),
             const SizedBox(height: 24),
             Center(

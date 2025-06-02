@@ -10,6 +10,7 @@ import '../screens/settings_screen.dart';
 import '../screens/join_opportunity_screen.dart';
 import '../screens/my_biz_screen.dart';
 import '../screens/message_center_screen.dart';
+import '../screens/notifications_screen.dart';
 
 class DashboardScreen extends StatefulWidget {
   const DashboardScreen({super.key});
@@ -23,11 +24,13 @@ class _DashboardScreenState extends State<DashboardScreen> {
   int? _directSponsorMin;
   int? _totalTeamMin;
   bool _isLoading = true;
+  int _unreadNotificationCount = 0;
 
   @override
   void initState() {
     super.initState();
     _loadUserAndSettings();
+    _listenForUnreadNotifications();
   }
 
   Future<void> _loadUserAndSettings() async {
@@ -40,6 +43,19 @@ class _DashboardScreenState extends State<DashboardScreen> {
     }
 
     try {
+      final adminUid = sessionUser.role == 'admin'
+          ? sessionUser.uid
+          : sessionUser.uplineAdmin;
+
+      final adminSettings = await FirebaseFirestore.instance
+          .collection('admin_settings')
+          .doc(adminUid)
+          .get();
+
+      final int directSponsorMin =
+          adminSettings.data()?['direct_sponsor_min'] ?? 5;
+      final int totalTeamMin = adminSettings.data()?['total_team_min'] ?? 20;
+
       final userDoc = await FirebaseFirestore.instance
           .collection('users')
           .doc(sessionUser.uid)
@@ -49,22 +65,6 @@ class _DashboardScreenState extends State<DashboardScreen> {
         'uid': userDoc.id,
         'biz_opp_ref_url': userDoc.data()?['biz_opp_ref_url'],
       });
-
-      final adminSettings = await FirebaseFirestore.instance
-          .collection('admin_settings')
-          .doc('global')
-          .get();
-
-      final int directSponsorMin =
-          adminSettings.data()?['direct_sponsor_min'] ?? 5;
-      final int totalTeamMin = adminSettings.data()?['total_team_min'] ?? 20;
-
-      debugPrint('🔎 Firestore values:');
-      debugPrint('  🔸 directSponsorMin: $directSponsorMin');
-      debugPrint('  🔸 totalTeamMin:     $totalTeamMin');
-      debugPrint(
-          '  🔹 user.directSponsorCount: ${updatedUser.directSponsorCount}');
-      debugPrint('  🔹 user.totalTeamCount:     ${updatedUser.totalTeamCount}');
 
       setState(() {
         _user = updatedUser;
@@ -78,10 +78,26 @@ class _DashboardScreenState extends State<DashboardScreen> {
     }
   }
 
+  void _listenForUnreadNotifications() async {
+    final user = await SessionManager().getCurrentUser();
+    if (user == null) return;
+
+    FirebaseFirestore.instance
+        .collection('users')
+        .doc(user.uid)
+        .collection('notifications')
+        .where('read', isEqualTo: false)
+        .snapshots()
+        .listen((snapshot) {
+      setState(() => _unreadNotificationCount = snapshot.docs.length);
+    });
+  }
+
   Widget buildButton({
     required IconData icon,
     required String label,
     required VoidCallback onPressed,
+    bool showRedDot = false,
   }) {
     return Container(
       margin: const EdgeInsets.symmetric(vertical: 8),
@@ -95,7 +111,25 @@ class _DashboardScreenState extends State<DashboardScreen> {
             borderRadius: BorderRadius.circular(12),
           ),
         ),
-        icon: Icon(icon, size: 22),
+        icon: Stack(
+          clipBehavior: Clip.none,
+          children: [
+            Icon(icon, size: 22),
+            if (showRedDot)
+              Positioned(
+                right: -2,
+                top: -2,
+                child: Container(
+                  width: 10,
+                  height: 10,
+                  decoration: const BoxDecoration(
+                    color: Colors.red,
+                    shape: BoxShape.circle,
+                  ),
+                ),
+              ),
+          ],
+        ),
         label: Text(label, style: const TextStyle(fontSize: 16)),
         onPressed: onPressed,
       ),
@@ -165,7 +199,6 @@ class _DashboardScreenState extends State<DashboardScreen> {
                 MaterialPageRoute(builder: (_) => ShareScreen()),
               ),
             ),
-            // PATCH START — Add Message Center button
             buildButton(
               icon: Icons.message,
               label: 'Message Center',
@@ -178,10 +211,22 @@ class _DashboardScreenState extends State<DashboardScreen> {
                 );
               },
             ),
-            // PATCH END
-            if (user?.role != 'admin' &&
-                (user?.directSponsorCount ?? 0) >= (_directSponsorMin ?? 1) &&
-                (user?.totalTeamCount ?? 0) >= (_totalTeamMin ?? 1))
+            buildButton(
+              icon: Icons.notifications,
+              label: 'Notifications',
+              showRedDot: _unreadNotificationCount > 0,
+              onPressed: () {
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(
+                    builder: (context) => const NotificationsScreen(),
+                  ),
+                );
+              },
+            ),
+            if (user?.role == 'user' &&
+                (user?.directSponsorCount ?? 0) >= (_directSponsorMin ?? 5) &&
+                (user?.totalTeamCount ?? 0) >= (_totalTeamMin ?? 20))
               buildButton(
                 icon: Icons.monetization_on,
                 label: user?.bizOppRefUrl != null

@@ -8,6 +8,16 @@ class FirestoreService {
   Future<void> createUser(Map<String, dynamic> userMap) async {
     final String uid = userMap['uid'];
     await _firestore.collection('users').doc(uid).set(userMap);
+
+    if (userMap['role'] == 'admin') {
+      await _firestore.collection('admin_settings').doc(uid).set({
+        'direct_sponsor_min': 1,
+        'total_team_min': 1,
+        'countries': [],
+        'biz_opp': '',
+        'biz_opp_ref_url': '',
+      });
+    }
   }
 
   Future<Map<String, dynamic>?> getUserData(String uid) async {

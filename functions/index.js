@@ -1,12 +1,13 @@
-// 🔐 Enhanced Cloud Function Logic for Secure Sponsor Updates
+// 🔐 Enhanced Cloud Function Logic for Secure Sponsor Updates & Auto-Invitations
 
-const { onRequest, onCall, HttpsError } = require("firebase-functions/v2/https");
+const { onRequest } = require("firebase-functions/v2/https");
+const { onCall } = require("firebase-functions/v2/https");
 const { initializeApp } = require("firebase-admin/app");
-const { getFirestore, FieldValue } = require("firebase-admin/firestore");
+const { getFirestore, FieldValue, Timestamp } = require("firebase-admin/firestore");
+const functions = require("firebase-functions");
 const admin = require("firebase-admin");
 
-admin.initializeApp();
-
+initializeApp();
 const db = getFirestore();
 
 // 🔹 SAFE: Public sponsor data only
@@ -47,6 +48,12 @@ exports.getCountriesByAdminUid = onRequest(async (req, res) => {
     if (!doc.exists) return res.status(404).json({ error: 'Admin user not found' });
 
     const data = doc.data();
+
+    // ✅ Ensure user has role = 'admin'
+    if (data.role !== 'admin') {
+      return res.status(403).json({ error: 'User is not an Admin' });
+    }
+
     if (!data || !Array.isArray(data.countries)) {
       return res.status(404).json({ error: 'Countries array not found' });
     }
@@ -84,12 +91,10 @@ exports.incrementSponsorCounts = onRequest(async (req, res) => {
       const userData = userDoc.data();
       const updates = { total_team_count: FieldValue.increment(1) };
 
-      // Direct sponsor gets both counts
       if (level === 0) {
         updates.direct_sponsor_count = FieldValue.increment(1);
       }
 
-      // Auto-qualify if eligible
       const direct = userData.direct_sponsor_count ?? 0;
       const total = userData.total_team_count ?? 0;
       const directMin = userData.direct_sponsor_min ?? 1;
@@ -102,7 +107,11 @@ exports.incrementSponsorCounts = onRequest(async (req, res) => {
 
       await userRef.update(updates);
 
-      // Traverse up the chain
+      // ✅ Check eligibility and send invite (first-level only)
+      if (level === 0) {
+        await checkEligibilityAndSendInvite(currentUid);
+      }
+
       currentUid = userData.referred_by;
       level++;
     }
@@ -115,17 +124,17 @@ exports.incrementSponsorCounts = onRequest(async (req, res) => {
 });
 
 // 🔐 Check Admin subscription or trial status
-exports.checkAdminSubscriptionStatus = onCall(async (request) => {
-  const uid = request.data.uid;
+exports.checkAdminSubscriptionStatus = functions.https.onCall(async (data, context) => {
+  const uid = data.uid;
 
   if (!uid) {
-    throw new HttpsError('invalid-argument', 'User ID is required.');
+    throw new functions.https.HttpsError('invalid-argument', 'User ID is required.');
   }
 
   try {
     const userDoc = await admin.firestore().collection('users').doc(uid).get();
     if (!userDoc.exists) {
-      throw new HttpsError('not-found', 'User not found.');
+      throw new functions.https.HttpsError('not-found', 'User not found.');
     }
 
     const userData = userDoc.data();
@@ -163,6 +172,68 @@ exports.checkAdminSubscriptionStatus = onCall(async (request) => {
     };
   } catch (error) {
     console.error('❌ Error in checkAdminSubscriptionStatus:', error);
-    throw new HttpsError('internal', 'Failed to verify subscription status.');
+    throw new functions.https.HttpsError('internal', 'Failed to verify subscription status.');
   }
 });
+
+// 🔐 Auto-check eligibility and invite user
+async function checkEligibilityAndSendInvite(uid) {
+  const userDoc = await db.collection('users').doc(uid).get();
+  if (!userDoc.exists) return;
+
+  const userData = userDoc.data();
+  const adminId = userData.upline_admin;
+  if (!adminId) return;
+
+  const settingsDoc = await db.collection('admin_settings').doc(adminId).get();
+  if (!settingsDoc.exists) return;
+
+  const settings = settingsDoc.data();
+  const { direct_sponsor_min = 1, total_team_min = 1, countries = [] } = settings;
+
+  const direct = userData.direct_sponsor_count ?? 0;
+  const total = userData.total_team_count ?? 0;
+  const country = userData.country ?? '';
+  const firstName = userData.firstName || '';
+
+  const isEligible =
+    direct >= direct_sponsor_min &&
+    total >= total_team_min &&
+    countries.includes(country);
+
+  if (!isEligible) return;
+
+  // Check for existing invite
+  const existing = await db.collection('invites')
+    .where('toUserId', '==', uid)
+    .where('fromAdminId', '==', adminId)
+    .limit(1)
+    .get();
+
+  if (!existing.empty) return;
+
+  // 🎯 Add invite to 'invites' collection
+  await db.collection('invites').add({
+    fromAdminId: adminId,
+    toUserId: uid,
+    bizOpp: settings.biz_opp ?? '',
+    refLink: settings.biz_opp_ref_url ?? '',
+    sentAt: Timestamp.now(),
+    status: 'sent',
+  });
+
+  // ✅ Also add personalized notification
+  await db.collection('users')
+    .doc(uid)
+    .collection('notifications')
+    .add({
+      type: 'invitation',
+      title: `🎉 Congratulations!`,
+      message: `Your hard work has paid off! You’re now qualified to join ${settings.biz_opp || 'a business opportunity'}.\n\nVisit your Dashboard and click ‘Join Opportunity’ to get started.`,
+      timestamp: Timestamp.now(),
+      read: false,
+    });
+
+  console.log(`✅ Invite + notification sent to user ${uid} from admin ${adminId}`);
+}
+

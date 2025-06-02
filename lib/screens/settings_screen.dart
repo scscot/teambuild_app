@@ -29,15 +29,16 @@ class _SettingsScreenState extends State<SettingsScreen> {
       TextEditingController();
 
   List<String> _selectedCountries = [];
-  bool _selectAllCountries = false;
+  // Removed: bool _selectAllCountries = false;
 
-  List<String> _originalSelectedCountries = [];
+  // Removed: List<String> _originalSelectedCountries = [];
   int _directSponsorMin = 5;
   int _totalTeamMin = 10;
   String? _userCountry;
   String? _bizOpp;
   String? _bizRefUrl;
   bool _isBizLocked = false;
+  bool _isBizSettingsSet = false;
 
   List<String> get allCountries {
     final fullList = statesByCountry.keys.toList();
@@ -60,8 +61,10 @@ class _SettingsScreenState extends State<SettingsScreen> {
     final uid = FirebaseAuth.instance.currentUser?.uid;
     if (uid == null) return;
 
-    final doc =
-        await FirebaseFirestore.instance.collection('users').doc(uid).get();
+    final doc = await FirebaseFirestore.instance
+        .collection('admin_settings')
+        .doc(uid)
+        .get();
     final data = doc.data();
 
     if (data != null) {
@@ -78,7 +81,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
           if (!countries.contains(country)) countries.insert(0, country);
         }
         _selectedCountries = countries;
-        _originalSelectedCountries = List.from(countries);
+        // Removed: _originalSelectedCountries = List.from(countries);
         _bizOpp = bizOpp;
         _bizRefUrl = bizRefUrl;
         _directSponsorMin = sponsorMin ?? 5;
@@ -92,6 +95,12 @@ class _SettingsScreenState extends State<SettingsScreen> {
         _refLinkConfirmController.text = _refLinkController.text;
         _isBizLocked =
             (_bizOpp?.isNotEmpty ?? false) || (_bizRefUrl?.isNotEmpty ?? false);
+
+        // Determine if biz settings have been set
+        _isBizSettingsSet = (_bizOpp?.isNotEmpty ?? false) &&
+            (_bizRefUrl?.isNotEmpty ?? false) &&
+            (sponsorMin != null) &&
+            (teamMin != null);
       });
     }
   }
@@ -99,7 +108,8 @@ class _SettingsScreenState extends State<SettingsScreen> {
   Future<void> _submit() async {
     if (!_formKey.currentState!.validate()) return;
 
-    if (!_isBizLocked) {
+    if (!_isBizLocked && !_isBizSettingsSet) {
+      // Only validate confirmation fields if not locked and not set
       if (_bizNameController.text != _bizNameConfirmController.text ||
           _refLinkController.text != _refLinkConfirmController.text) {
         ScaffoldMessenger.of(context).showSnackBar(
@@ -142,13 +152,24 @@ class _SettingsScreenState extends State<SettingsScreen> {
 
     final settingsRef =
         FirebaseFirestore.instance.collection('admin_settings').doc(uid);
-    await settingsRef.set({
-      if (!_isBizLocked) 'biz_opp': _bizNameController.text.trim(),
-      if (!_isBizLocked) 'biz_opp_ref_url': _refLinkController.text.trim(),
-      'direct_sponsor_min': _directSponsorMin,
-      'total_team_min': _totalTeamMin,
-      'countries': _selectedCountries,
-    });
+
+    // Only update these fields if they haven't been set yet
+    if (!_isBizSettingsSet) {
+      await settingsRef.set(
+          {
+            'biz_opp': _bizNameController.text.trim(),
+            'biz_opp_ref_url': _refLinkController.text.trim(),
+            'direct_sponsor_min': _directSponsorMin,
+            'total_team_min': _totalTeamMin,
+            'countries': _selectedCountries,
+          },
+          SetOptions(
+              merge: true)); // Use merge to avoid overwriting other fields
+    } else {
+      await settingsRef.set({
+        'countries': _selectedCountries,
+      }, SetOptions(merge: true));
+    }
 
     await _loadUserSettings();
     Scrollable.ensureVisible(_formKey.currentContext ?? context,
@@ -187,12 +208,23 @@ class _SettingsScreenState extends State<SettingsScreen> {
               const SizedBox(height: 16),
               TextFormField(
                 controller: _bizNameController,
-                readOnly: _isBizLocked,
-                decoration: const InputDecoration(
-                    labelText: 'Business Opportunity Name'),
-                validator: (value) => value!.isEmpty ? 'Required' : null,
+                readOnly: _isBizLocked || _isBizSettingsSet,
+                maxLines: _isBizSettingsSet ? null : 1,
+                keyboardType: _isBizSettingsSet
+                    ? TextInputType.multiline
+                    : TextInputType.text,
+                decoration: InputDecoration(
+                  labelText: 'Business Opportunity Name',
+                  filled: _isBizLocked || _isBizSettingsSet,
+                  fillColor: (_isBizLocked || _isBizSettingsSet)
+                      ? Colors.grey[200]
+                      : null,
+                ),
+                validator: (value) => (_isBizLocked || _isBizSettingsSet)
+                    ? null
+                    : (value!.isEmpty ? 'Required' : null),
               ),
-              if (!_isBizLocked)
+              if (!_isBizLocked && !_isBizSettingsSet)
                 TextFormField(
                   controller: _bizNameConfirmController,
                   decoration: const InputDecoration(
@@ -201,7 +233,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
                 ),
               const SizedBox(height: 16),
               GestureDetector(
-                onTap: _isBizLocked
+                onTap: (_isBizLocked || _isBizSettingsSet)
                     ? null
                     : () {
                         showDialog(
@@ -227,18 +259,29 @@ class _SettingsScreenState extends State<SettingsScreen> {
                         );
                       },
                 child: AbsorbPointer(
-                  absorbing: _isBizLocked,
+                  absorbing: _isBizLocked || _isBizSettingsSet,
                   child: Column(
                     children: [
                       TextFormField(
                         controller: _refLinkController,
-                        readOnly: _isBizLocked,
-                        decoration: const InputDecoration(
-                            labelText: 'Your Unique Referral Link URL'),
+                        readOnly: _isBizLocked || _isBizSettingsSet,
+                        maxLines: _isBizSettingsSet ? null : 1,
+                        keyboardType: _isBizSettingsSet
+                            ? TextInputType.multiline
+                            : TextInputType.url,
+                        decoration: InputDecoration(
+                          labelText: 'Your Unique Referral Link URL',
+                          filled: _isBizLocked || _isBizSettingsSet,
+                          fillColor: (_isBizLocked || _isBizSettingsSet)
+                              ? Colors.grey[200]
+                              : null,
+                        ),
                         validator: (value) =>
-                            value!.isEmpty ? 'Required' : null,
+                            (_isBizLocked || _isBizSettingsSet)
+                                ? null
+                                : (value!.isEmpty ? 'Required' : null),
                       ),
-                      if (!_isBizLocked)
+                      if (!_isBizLocked && !_isBizSettingsSet)
                         TextFormField(
                           controller: _refLinkConfirmController,
                           decoration: const InputDecoration(
@@ -270,28 +313,14 @@ class _SettingsScreenState extends State<SettingsScreen> {
                   ],
                 ),
               ),
-              CheckboxListTile(
-                title: const Text('Select All Countries'),
-                value: _selectAllCountries,
-                onChanged: (value) {
-                  setState(() {
-                    _selectAllCountries = value!;
-                    if (_selectAllCountries) {
-                      _selectedCountries = List.from(allCountries);
-                    } else {
-                      _selectedCountries =
-                          List.from(_originalSelectedCountries);
-                    }
-                  });
-                },
-              ),
+              const SizedBox(height: 16),
               MultiSelectDialogField<String>(
                 items: allCountries
                     .map((e) => MultiSelectItem<String>(e, e))
                     .toList(),
                 initialValue: _selectedCountries,
                 title: const Text("Select Countries"),
-                buttonText: const Text("Or Select Individual Countries"),
+                buttonText: const Text("Select Countries"),
                 searchable: true,
                 decoration: BoxDecoration(
                   color: Colors.white,
@@ -365,7 +394,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
                     ),
                     const TextSpan(
                         text:
-                            " strong, aligned, and positioned for long-term success!"),
+                            " strong, aligned, and positioned for long-term success!\n\nImportant! To maintain consistency, integrity, and fairness, once these values are set, they cannot be changed"),
                   ],
                 ),
               ),
@@ -382,38 +411,44 @@ class _SettingsScreenState extends State<SettingsScreen> {
                   Expanded(
                     child: TextFormField(
                       controller: _directSponsorMinController,
+                      readOnly: _isBizSettingsSet,
                       decoration: InputDecoration(
                         labelText: 'Direct Sponsors',
-                        filled: true,
-                        fillColor: const Color(0xFFF5F5F5),
+                        filled: _isBizSettingsSet,
+                        fillColor: _isBizSettingsSet ? Colors.grey[200] : null,
                         contentPadding: const EdgeInsets.symmetric(
                             horizontal: 16, vertical: 14),
                         border: OutlineInputBorder(
                             borderRadius: BorderRadius.circular(12)),
                       ),
                       keyboardType: TextInputType.number,
-                      onChanged: (value) {
-                        _directSponsorMin = int.tryParse(value) ?? 5;
-                      },
+                      onChanged: _isBizSettingsSet
+                          ? null
+                          : (value) {
+                              _directSponsorMin = int.tryParse(value) ?? 5;
+                            },
                     ),
                   ),
                   const SizedBox(width: 16),
                   Expanded(
                     child: TextFormField(
                       controller: _totalTeamMinController,
+                      readOnly: _isBizSettingsSet,
                       decoration: InputDecoration(
                         labelText: 'Total Team Members',
-                        filled: true,
-                        fillColor: const Color(0xFFF5F5F5),
+                        filled: _isBizSettingsSet,
+                        fillColor: _isBizSettingsSet ? Colors.grey[200] : null,
                         contentPadding: const EdgeInsets.symmetric(
                             horizontal: 16, vertical: 14),
                         border: OutlineInputBorder(
                             borderRadius: BorderRadius.circular(12)),
                       ),
                       keyboardType: TextInputType.number,
-                      onChanged: (value) {
-                        _totalTeamMin = int.tryParse(value) ?? 10;
-                      },
+                      onChanged: _isBizSettingsSet
+                          ? null
+                          : (value) {
+                              _totalTeamMin = int.tryParse(value) ?? 10;
+                            },
                     ),
                   ),
                 ],
