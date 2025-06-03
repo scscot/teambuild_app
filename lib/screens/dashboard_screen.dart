@@ -43,9 +43,14 @@ class _DashboardScreenState extends State<DashboardScreen> {
     }
 
     try {
-      final adminUid = sessionUser.role == 'admin'
-          ? sessionUser.uid
-          : sessionUser.uplineAdmin;
+      final userDoc = await FirebaseFirestore.instance
+          .collection('users')
+          .doc(sessionUser.uid)
+          .get();
+
+      final updatedUser = UserModel.fromFirestore(userDoc);
+      final adminUid = updatedUser.uplineAdmin;
+      debugPrint('🔎 uplineAdmin from Firestore: $adminUid');
 
       final adminSettings = await FirebaseFirestore.instance
           .collection('admin_settings')
@@ -58,16 +63,6 @@ class _DashboardScreenState extends State<DashboardScreen> {
 
       debugPrint('📊 directSponsorMin from Firestore: $directSponsorMin');
       debugPrint('📊 totalTeamMin from Firestore: $totalTeamMin');
-
-      final userDoc = await FirebaseFirestore.instance
-          .collection('users')
-          .doc(sessionUser.uid)
-          .get();
-      final updatedUser = UserModel.fromMap({
-        ...userDoc.data()!,
-        'uid': userDoc.id,
-        'biz_opp_ref_url': userDoc.data()?['biz_opp_ref_url'],
-      });
 
       setState(() {
         _user = updatedUser;
@@ -85,18 +80,15 @@ class _DashboardScreenState extends State<DashboardScreen> {
     final user = await SessionManager().getCurrentUser();
     if (user == null) return;
 
-    try {
-      final snapshot = await FirebaseFirestore.instance
-          .collection('users')
-          .doc(user.uid)
-          .collection('notifications')
-          .where('read', isEqualTo: false)
-          .get();
-
+    FirebaseFirestore.instance
+        .collection('users')
+        .doc(user.uid)
+        .collection('notifications')
+        .where('read', isEqualTo: false)
+        .snapshots()
+        .listen((snapshot) {
       setState(() => _unreadNotificationCount = snapshot.docs.length);
-    } catch (e) {
-      debugPrint('⚠️ Error fetching unread notification count: $e');
-    }
+    });
   }
 
   Widget buildButton({

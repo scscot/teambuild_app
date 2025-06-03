@@ -12,6 +12,7 @@ import '../screens/join_opportunity_screen.dart';
 import '../services/session_manager.dart';
 import '../screens/new_registration_screen.dart';
 import '../screens/message_center_screen.dart';
+import '../models/user_model.dart';
 
 class AppHeaderWithMenu extends StatefulWidget implements PreferredSizeWidget {
   const AppHeaderWithMenu({super.key});
@@ -45,10 +46,20 @@ class _AppHeaderWithMenuState extends State<AppHeaderWithMenu> {
       if (data == null) return;
 
       final bizJoinDate = data['biz_join_date'];
-      final directSponsorMin = data['direct_sponsor_min'] ?? 1;
-      final totalTeamMin = data['total_team_min'] ?? 1;
       final directCount = data['direct_sponsor_count'] ?? 0;
       final teamCount = data['total_team_count'] ?? 0;
+
+      final updatedUser = UserModel.fromFirestore(userDoc);
+      final adminUid = updatedUser.uplineAdmin;
+
+      final adminSettings = await FirebaseFirestore.instance
+          .collection('admin_settings')
+          .doc(adminUid)
+          .get();
+
+      final int directSponsorMin =
+          adminSettings.data()?['direct_sponsor_min'] ?? 5;
+      final int totalTeamMin = adminSettings.data()?['total_team_min'] ?? 20;
 
       if (bizJoinDate == null &&
           directCount >= directSponsorMin &&
